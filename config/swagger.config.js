@@ -9,9 +9,8 @@ const options = {
       description: "API documentation for Central Auth backend",
     },
     servers: [
-      {
-        url: 'http://localhost:4000',
-      },
+      { url: "https://unified-portal-backend-olyo.onrender.com", description: "Production Server" },
+      { url: "http://localhost:4000", description: "Local Server" },
     ],
     components: {
       securitySchemes: {
