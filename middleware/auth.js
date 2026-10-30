@@ -21,12 +21,19 @@ const Auth = async (req, res, next) => {
             );
         }
 
+        if (!decoded.id) {
+            return ResponseService.unauthorized(res, "Unauthorized - Invalid token");
+        }
         if (!decoded.company_id) {
             return ResponseService.unauthorized(res, "Company not assigned, contact admin");
         }
+        if (!decoded.role_id) {
+            return ResponseService.unauthorized(res, "Role not assigned, contact admin");
+        }
 
+        req.userId = decoded.id;
         req.companyId = decoded.company_id;
-        req.userId = decoded.user_id ?? null; // token payload ka key apne hisaab se adjust karo
+        req.roleId = decoded.role_id;
         next();
     } catch (error) {
         console.log(error);

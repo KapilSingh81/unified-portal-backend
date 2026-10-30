@@ -15,6 +15,7 @@ dist/
 package-lock.json
 .vscode/
 /uploads
+/database
 
 # IDEs and editors
 .idea/

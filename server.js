@@ -15,6 +15,7 @@ import roleMenuRouter from "./routes/roleMenuRoutes.js";
 import rolePermissionRouter from "./routes/rolePermissionRoutes.js";
 import logRouter from "./routes/logRoutes.js";
 import "./models/index.js"; 
+import authRouter from "./routes/authRoutes.js";
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use("/api/parent-user", parentUserRouter);
 app.use("/api/role-menu", roleMenuRouter);
 app.use("/api/role-permission", rolePermissionRouter);
 app.use("/api/log", logRouter);
+app.use("/api/auth", authRouter);
 
 
 const PORT = process.env.PORT || 4000;

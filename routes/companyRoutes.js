@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, deleteCompany, List, update } from '../controller/companyController.js';
+import Auth from '../middleware/auth.js';
 
 const companyRouter = express.Router();
 
@@ -41,7 +42,7 @@ const companyRouter = express.Router();
  *       400:
  *         description: Name is missing or company already exists
  */
-companyRouter.post('/create', Create);
+companyRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
@@ -55,7 +56,7 @@ companyRouter.post('/create', Create);
  *       200:
  *         description: List of companies (newest first)
  */
-companyRouter.get('/list', List);
+companyRouter.get('/list', Auth, List);
 
 /**
  * @swagger
@@ -98,7 +99,7 @@ companyRouter.get('/list', List);
  *       404:
  *         description: Company not found
  */
-companyRouter.put('/update/:id', update);
+companyRouter.put('/update/:id', Auth, update);
 
 /**
  * @swagger
@@ -122,6 +123,6 @@ companyRouter.put('/update/:id', update);
  *       404:
  *         description: Company not found
  */
-companyRouter.delete('/delete/:id', deleteCompany);
+companyRouter.delete('/delete/:id', Auth, deleteCompany);
 
 export default companyRouter;
