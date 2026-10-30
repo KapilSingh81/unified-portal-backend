@@ -19,10 +19,10 @@ const authRouter = express.Router();
  *             properties:
  *               username:
  *                 type: string
- *                 example: admin
+ *                 example: skyAdmin
  *               password:
  *                 type: string
- *                 example: "123456"
+ *                 example: "admin@123"
  *     responses:
  *       200:
  *         description: Login successful, returns user and JWT token

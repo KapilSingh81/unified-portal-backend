@@ -1,5 +1,6 @@
 import express from 'express';
 import { List, remove, Save } from '../controller/rolePermissionController.js';
+import Auth from '../middleware/auth.js';
 
 const rolePermissionRouter = express.Router();
 
@@ -53,7 +54,7 @@ const rolePermissionRouter = express.Router();
  *       404:
  *         description: Role not found
  */
-rolePermissionRouter.post('/save', Save);
+rolePermissionRouter.post('/save', Auth, Save);
 
 /**
  * @swagger
@@ -72,7 +73,7 @@ rolePermissionRouter.post('/save', Save);
  *       200:
  *         description: List of role-permission mappings
  */
-rolePermissionRouter.get('/list', List);
+rolePermissionRouter.get('/list', Auth, List);
 
 /**
  * @swagger
@@ -93,6 +94,6 @@ rolePermissionRouter.get('/list', List);
  *       404:
  *         description: Permission mapping not found
  */
-rolePermissionRouter.delete('/delete/:id', remove);
+rolePermissionRouter.delete('/delete/:id', Auth, remove);
 
 export default rolePermissionRouter;

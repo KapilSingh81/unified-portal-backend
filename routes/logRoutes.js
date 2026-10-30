@@ -1,5 +1,6 @@
 import express from 'express';
 import { List } from '../controller/logController.js';
+import Auth from '../middleware/auth.js';
 
 const logRouter = express.Router();
 
@@ -60,6 +61,6 @@ const logRouter = express.Router();
  *       200:
  *         description: "{ rows, total, page, limit }"
  */
-logRouter.get('/list', List);
+logRouter.get('/list', Auth, List);
 
 export default logRouter;

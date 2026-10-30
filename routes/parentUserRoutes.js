@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, List, remove } from '../controller/parentUserController.js';
+import Auth from '../middleware/auth.js';
 
 const parentUserRouter = express.Router();
 
@@ -36,7 +37,7 @@ const parentUserRouter = express.Router();
  *       409:
  *         description: Mapping already exists
  */
-parentUserRouter.post('/create', Create);
+parentUserRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
@@ -59,7 +60,7 @@ parentUserRouter.post('/create', Create);
  *       200:
  *         description: List of mappings with parent and child users
  */
-parentUserRouter.get('/list', List);
+parentUserRouter.get('/list', Auth, List);
 
 /**
  * @swagger
@@ -80,6 +81,6 @@ parentUserRouter.get('/list', List);
  *       404:
  *         description: Mapping not found
  */
-parentUserRouter.delete('/delete/:id', remove);
+parentUserRouter.delete('/delete/:id', Auth, remove);
 
 export default parentUserRouter;

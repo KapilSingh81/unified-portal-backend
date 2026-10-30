@@ -1,5 +1,6 @@
 import express from 'express';
 import { Assign, List } from '../controller/roleMenuController.js';
+import Auth from '../middleware/auth.js';
 
 const roleMenuRouter = express.Router();
 
@@ -40,7 +41,7 @@ const roleMenuRouter = express.Router();
  *       404:
  *         description: Role not found
  */
-roleMenuRouter.post('/assign', Assign);
+roleMenuRouter.post('/assign', Auth, Assign);
 
 /**
  * @swagger
@@ -59,6 +60,6 @@ roleMenuRouter.post('/assign', Assign);
  *       200:
  *         description: List of role-menu mappings with menu details
  */
-roleMenuRouter.get('/list', List);
+roleMenuRouter.get('/list', Auth, List);
 
 export default roleMenuRouter;

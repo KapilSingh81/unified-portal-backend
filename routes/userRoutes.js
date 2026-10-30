@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, deleteUser, GetById, List, update } from '../controller/userController.js';
+import Auth from '../middleware/auth.js';
 
 const userRouter = express.Router();
 
@@ -46,7 +47,7 @@ const userRouter = express.Router();
  *       404:
  *         description: Company or role not found
  */
-userRouter.post('/create', Create);
+userRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
@@ -69,7 +70,7 @@ userRouter.post('/create', Create);
  *       200:
  *         description: List of users with role and company
  */
-userRouter.get('/list', List);
+userRouter.get('/list', Auth, List);
 
 /**
  * @swagger
@@ -90,7 +91,7 @@ userRouter.get('/list', List);
  *       404:
  *         description: User not found
  */
-userRouter.get('/:id', GetById);
+userRouter.get('/:id', Auth, GetById);
 
 /**
  * @swagger
@@ -127,7 +128,7 @@ userRouter.get('/:id', GetById);
  *       404:
  *         description: User not found
  */
-userRouter.put('/update/:id', update);
+userRouter.put('/update/:id', Auth, update);
 
 /**
  * @swagger
@@ -148,6 +149,6 @@ userRouter.put('/update/:id', update);
  *       404:
  *         description: User not found
  */
-userRouter.delete('/delete/:id', deleteUser);
+userRouter.delete('/delete/:id', Auth, deleteUser);
 
 export default userRouter;

@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, deleteDomain, List, update } from '../controller/domainController.js';
+import Auth from '../middleware/auth.js';
 
 const domainRouter = express.Router();
 
@@ -62,7 +63,7 @@ const domainRouter = express.Router();
  *       500:
  *         description: Server error
  */
-domainRouter.get('/list',  List);
+domainRouter.get('/list', Auth, List);
 
 /**
  * @swagger
@@ -95,7 +96,7 @@ domainRouter.get('/list',  List);
  *       404:
  *         description: Company not found
  */
-domainRouter.post('/create', Create);
+domainRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
@@ -130,7 +131,7 @@ domainRouter.post('/create', Create);
  *       404:
  *         description: Domain not found
  */
-domainRouter.put('/update/:id', update);
+domainRouter.put('/update/:id', Auth, update);
 
 /**
  * @swagger
@@ -151,6 +152,6 @@ domainRouter.put('/update/:id', update);
  *       409:
  *         description: Domain has modules
  */
-domainRouter.delete('/delete/:id', deleteDomain);
+domainRouter.delete('/delete/:id', Auth, deleteDomain);
 
 export default domainRouter;

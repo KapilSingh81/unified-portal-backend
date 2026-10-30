@@ -6,7 +6,6 @@ import { isUuid, isNonEmpty } from "../utils/validate.js";
 const List = async (req, res) => {
     try {
         const domainData = await domainModel.findAll({
-            // where: { company_id: req.companyId, is_deleted: false },
             where: {is_deleted: false },
             order: [['name', 'ASC']],
         });

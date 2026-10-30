@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, deleteMenu, List, Tree, update } from '../controller/menuController.js';
+import Auth from '../middleware/auth.js';
 
 const menuRouter = express.Router();
 
@@ -45,7 +46,7 @@ const menuRouter = express.Router();
  *       404:
  *         description: Module or parent menu not found
  */
-menuRouter.post('/create', Create);
+menuRouter.post('/create',Auth, Create);
 
 /**
  * @swagger
@@ -68,7 +69,7 @@ menuRouter.post('/create', Create);
  *       200:
  *         description: List of menus
  */
-menuRouter.get('/list', List);
+menuRouter.get('/list',Auth, List);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ menuRouter.get('/list', List);
  *       200:
  *         description: Menus with children[]
  */
-menuRouter.get('/tree', Tree);
+menuRouter.get('/tree',Auth, Tree);
 
 /**
  * @swagger
@@ -126,7 +127,7 @@ menuRouter.get('/tree', Tree);
  *       404:
  *         description: Menu not found
  */
-menuRouter.put('/update/:id', update);
+menuRouter.put('/update/:id',Auth, update);
 
 /**
  * @swagger
@@ -147,6 +148,6 @@ menuRouter.put('/update/:id', update);
  *       409:
  *         description: Menu has sub menus
  */
-menuRouter.delete('/delete/:id', deleteMenu);
+menuRouter.delete('/delete/:id',Auth, deleteMenu);
 
 export default menuRouter;

@@ -1,5 +1,6 @@
 import express from 'express';
 import { Create, deleteModule, List, update } from '../controller/moudleController.js';
+import Auth from '../middleware/auth.js';
 
 const moduleRouter = express.Router();
 
@@ -86,7 +87,7 @@ const moduleRouter = express.Router();
  *       500:
  *         description: Server error
  */
-moduleRouter.get('/list',  List);
+moduleRouter.get('/list',Auth,  List);
 
 /**
  * @swagger
@@ -119,7 +120,7 @@ moduleRouter.get('/list',  List);
  *       404:
  *         description: Domain not found
  */
-moduleRouter.post('/create', Create);
+moduleRouter.post('/create',Auth, Create);
 
 /**
  * @swagger
@@ -154,7 +155,7 @@ moduleRouter.post('/create', Create);
  *       404:
  *         description: Module not found
  */
-moduleRouter.put('/update/:id', update);
+moduleRouter.put('/update/:id',Auth, update);
 
 /**
  * @swagger
@@ -175,6 +176,6 @@ moduleRouter.put('/update/:id', update);
  *       409:
  *         description: Module has menus
  */
-moduleRouter.delete('/delete/:id', deleteModule);
+moduleRouter.delete('/delete/:id',Auth, deleteModule);
 
 export default moduleRouter;
