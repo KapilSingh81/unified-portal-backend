@@ -1,12 +1,12 @@
 import { Op } from "sequelize";
-import { domainModel, companyModel, moduleModel } from "../models/index.js";
+import { domainModel, moduleModel } from "../models/index.js";
 import ResponseService from "../utils/httpService.js";
-import { isUuid, isNonEmpty } from "../utils/validate.js";
+import { isNonEmpty } from "../utils/validate.js";
 
 const List = async (req, res) => {
     try {
         const domainData = await domainModel.findAll({
-            where: {is_deleted: false },
+            where: { is_deleted: false },
             order: [['name', 'ASC']],
         });
 
@@ -22,18 +22,14 @@ const List = async (req, res) => {
 
 const Create = async (req, res) => {
     try {
-        const { company_id, name, url, status } = req.body;
-        if (!isUuid(company_id)) return ResponseService.badRequest(res, 'Valid company id is required');
+        const { name, url, status } = req.body;
         if (!isNonEmpty(name)) return ResponseService.badRequest(res, 'Domain name is required');
         if (!isNonEmpty(url)) return ResponseService.badRequest(res, 'Domain url is required');
 
-        const company = await companyModel.findOne({ where: { id: company_id, is_deleted: false } });
-        if (!company) return ResponseService.notFound(res, 'Company not found');
-
-        const exists = await domainModel.findOne({ where: { company_id, name: name.trim(), is_deleted: false } });
+        const exists = await domainModel.findOne({ where: { name: name.trim(), is_deleted: false } });
         if (exists) return ResponseService.badRequest(res, 'Domain already exist');
 
-        const domain = await domainModel.create({ company_id, name: name.trim(), url: url.trim(), status: status ?? true });
+        const domain = await domainModel.create({ name: name.trim(), url: url.trim(), status: status ?? true });
         return ResponseService.created(res, domain, 'Domain created successfully');
     } catch (error) {
         return ResponseService.error(res, error.message);
@@ -43,7 +39,7 @@ const Create = async (req, res) => {
 const update = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!isUuid(id)) return ResponseService.badRequest(res, 'Valid domain id is required');
+        if (!(id)) return ResponseService.badRequest(res, 'Valid domain id is required');
 
         const domain = await domainModel.findOne({ where: { id, is_deleted: false } });
         if (!domain) return ResponseService.notFound(res, 'Domain not found');
@@ -53,7 +49,7 @@ const update = async (req, res) => {
         if (url !== undefined && !isNonEmpty(url)) return ResponseService.badRequest(res, 'Domain url cannot be empty');
 
         const duplicate = await domainModel.findOne({
-            where: { company_id: domain.company_id, name: name.trim(), is_deleted: false, id: { [Op.ne]: id } },
+            where: { name: name.trim(), is_deleted: false, id: { [Op.ne]: id } },
         });
         if (duplicate) return ResponseService.badRequest(res, 'Domain name already exist');
 
@@ -71,7 +67,7 @@ const update = async (req, res) => {
 const deleteDomain = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!isUuid(id)) return ResponseService.badRequest(res, 'Valid domain id is required');
+        if (!(id)) return ResponseService.badRequest(res, 'Valid domain id is required');
 
         const domain = await domainModel.findOne({ where: { id, is_deleted: false } });
         if (!domain) return ResponseService.notFound(res, 'Domain not found');

@@ -1,5 +1,5 @@
 import express from 'express';
-import { Create, deleteMenu, List, Tree, update } from '../controller/menuController.js';
+import { Create, deleteMenu, List, update } from '../controller/menuController.js';
 import Auth from '../middleware/auth.js';
 
 const menuRouter = express.Router();
@@ -8,14 +8,14 @@ const menuRouter = express.Router();
  * @swagger
  * tags:
  *   name: Menu
- *   description: APIs for managing the menu hierarchy, including parent menus and sub-menus using parent_menu_id
+ *   description: APIs for managing menus of a module
  */
 
 /**
  * @swagger
  * /api/menu/create:
  *   post:
- *     summary: Create a menu (parent_menu_id optional for sub menu)
+ *     summary: Create a menu
  *     tags: [Menu]
  *     requestBody:
  *       required: true
@@ -28,10 +28,6 @@ const menuRouter = express.Router();
  *               module_id:
  *                 type: string
  *                 format: uuid
- *               parent_menu_id:
- *                 type: string
- *                 format: uuid
- *                 nullable: true
  *               name:
  *                 type: string
  *                 example: Visitor List
@@ -44,57 +40,33 @@ const menuRouter = express.Router();
  *       201:
  *         description: Menu created successfully
  *       404:
- *         description: Module or parent menu not found
+ *         description: Module not found
  */
-menuRouter.post('/create',Auth, Create);
+menuRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
  * /api/menu/list:
  *   get:
- *     summary: Flat list of menus
+ *     summary: List of menus
  *     tags: [Menu]
  *     parameters:
  *       - in: query
  *         name: module_id
- *         schema:
- *           type: string
- *           format: uuid
- *       - in: query
- *         name: parent_menu_id
- *         description: Menu id, or the word null for top level menus
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: List of menus
- */
-menuRouter.get('/list',Auth, List);
-
-/**
- * @swagger
- * /api/menu/tree:
- *   get:
- *     summary: Nested menu tree of a module
- *     tags: [Menu]
- *     parameters:
- *       - in: query
- *         name: module_id
- *         required: true
  *         schema:
  *           type: string
  *           format: uuid
  *     responses:
  *       200:
- *         description: Menus with children[]
+ *         description: List of menus
  */
-menuRouter.get('/tree',Auth, Tree);
+menuRouter.get('/list', Auth, List);
 
 /**
  * @swagger
  * /api/menu/update/{id}:
  *   put:
- *     summary: Update a menu (parent change par loop check hota hai)
+ *     summary: Update a menu
  *     tags: [Menu]
  *     parameters:
  *       - in: path
@@ -115,10 +87,6 @@ menuRouter.get('/tree',Auth, Tree);
  *                 type: string
  *               url:
  *                 type: string
- *               parent_menu_id:
- *                 type: string
- *                 format: uuid
- *                 nullable: true
  *               status:
  *                 type: boolean
  *     responses:
@@ -127,13 +95,13 @@ menuRouter.get('/tree',Auth, Tree);
  *       404:
  *         description: Menu not found
  */
-menuRouter.put('/update/:id',Auth, update);
+menuRouter.put('/update/:id', Auth, update);
 
 /**
  * @swagger
  * /api/menu/delete/{id}:
  *   delete:
- *     summary: Delete a menu (soft delete). Blocked if it has sub menus.
+ *     summary: Delete a menu (soft delete)
  *     tags: [Menu]
  *     parameters:
  *       - in: path
@@ -145,9 +113,9 @@ menuRouter.put('/update/:id',Auth, update);
  *     responses:
  *       200:
  *         description: Menu deleted successfully
- *       409:
- *         description: Menu has sub menus
+ *       404:
+ *         description: Menu not found
  */
-menuRouter.delete('/delete/:id',Auth, deleteMenu);
+menuRouter.delete('/delete/:id', Auth, deleteMenu);
 
 export default menuRouter;

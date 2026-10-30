@@ -15,7 +15,7 @@ const domainRouter = express.Router();
  * @swagger
  * /api/domain/list:
  *   get:
- *     summary: Get all domains of logged-in user's company
+ *     summary: Get all domains
  *     tags: [Domain]
  *     security:
  *       - bearerAuth: []
@@ -42,10 +42,6 @@ const domainRouter = express.Router();
  *                         type: string
  *                         format: uuid
  *                         example: 3f2b8c1e-9a4d-4e6b-8f21-7c5d0a1b2e34
- *                       company_id:
- *                         type: string
- *                         format: uuid
- *                         example: 9b1d4a7c-2e3f-4c5a-8d6b-1f0e9a8b7c6d
  *                       name:
  *                         type: string
  *                         example: Wave Corp Portal
@@ -60,6 +56,8 @@ const domainRouter = express.Router();
  *                         example: false
  *       401:
  *         description: Unauthorized (missing/invalid token)
+ *       404:
+ *         description: No domains found
  *       500:
  *         description: Server error
  */
@@ -69,7 +67,7 @@ domainRouter.get('/list', Auth, List);
  * @swagger
  * /api/domain/create:
  *   post:
- *     summary: Create a domain under a company
+ *     summary: Create a domain
  *     tags: [Domain]
  *     requestBody:
  *       required: true
@@ -77,11 +75,8 @@ domainRouter.get('/list', Auth, List);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [company_id, name, url]
+ *             required: [name, url]
  *             properties:
- *               company_id:
- *                 type: string
- *                 format: uuid
  *               name:
  *                 type: string
  *                 example: Wave Corp Portal
@@ -93,8 +88,8 @@ domainRouter.get('/list', Auth, List);
  *     responses:
  *       201:
  *         description: Domain created successfully
- *       404:
- *         description: Company not found
+ *       400:
+ *         description: Domain already exist or missing fields
  */
 domainRouter.post('/create', Auth, Create);
 

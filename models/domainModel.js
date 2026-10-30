@@ -8,11 +8,11 @@ export const domainModel = sequelize.define("domain_master", {
         primaryKey: true,
         allowNull: false,
     },
-    company_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: { model: 'company_master', key: 'id' },
-    },
+    // company_id: {
+    //     type: DataTypes.UUID,
+    //     allowNull: false,
+    //     references: { model: 'company_master', key: 'id' },
+    // },
     name: {
         type: DataTypes.STRING(100),
         allowNull: false,
