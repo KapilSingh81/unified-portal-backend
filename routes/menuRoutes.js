@@ -7,7 +7,7 @@ const menuRouter = express.Router();
  * @swagger
  * tags:
  *   name: Menu
- *   description: Menu master APIs (parent_menu_id se sub-menu)
+ *   description: APIs for managing the menu hierarchy, including parent menus and sub-menus using parent_menu_id
  */
 
 /**

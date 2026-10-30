@@ -7,7 +7,7 @@ const roleMenuRouter = express.Router();
  * @swagger
  * tags:
  *   name: RoleMenuMapping
- *   description: Role ko kaun se menus accessible hain
+ *   description: Menus accessible to the role.
  */
 
 /**
