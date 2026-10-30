@@ -7,7 +7,7 @@ const userRouter = express.Router();
  * @swagger
  * tags:
  *   name: User
- *   description: User master APIs (password response me kabhi nahi aata)
+ *   description: User master APIs
  */
 
 /**
