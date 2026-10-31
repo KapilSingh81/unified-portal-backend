@@ -49,6 +49,10 @@ const moduleRouter = express.Router();
  *                         type: string
  *                         nullable: true
  *                         example: /visitors
+ *                       icon:
+ *                         type: string
+ *                         nullable: true
+ *                         example: 
  *                       status:
  *                         type: boolean
  *                         example: true
@@ -84,6 +88,9 @@ moduleRouter.get('/list', Auth, List);
  *               url:
  *                 type: string
  *                 example: /visitors
+ *               icon:
+ *                 type: string
+ *                 example: 
  *               status:
  *                 type: boolean
  *                 example: true
@@ -128,6 +135,9 @@ moduleRouter.post('/create', Auth, Create);
  *               url:
  *                 type: string
  *                 example: /visitors
+ *               icon:
+ *                 type: string
+ *                 example: 
  *               status:
  *                 type: boolean
  *                 example: true

@@ -17,7 +17,7 @@ const List = async (req, res) => {
 
 const Create = async (req, res) => {
     try {
-        const { name, url, status } = req.body;
+        const { name, url, status , icon } = req.body;
         if (!isNonEmpty(name)) return ResponseService.badRequest(res, 'Module name is required');
 
         const exists = await moduleModel.findOne({ where: { name: name.trim(), is_deleted: false } });
@@ -27,6 +27,7 @@ const Create = async (req, res) => {
             name: name.trim(),
             url: url?.trim() || null,
             status: status ?? true,
+            icon
         });
         return ResponseService.created(res, module, 'Module created successfully');
     } catch (error) {
@@ -42,7 +43,7 @@ const update = async (req, res) => {
         const module = await moduleModel.findOne({ where: { id, is_deleted: false } });
         if (!module) return ResponseService.notFound(res, 'Module not found');
 
-        const { name, url, status } = req.body;
+        const { name, url, status , icon } = req.body;
         if (!isNonEmpty(name)) return ResponseService.badRequest(res, 'Module name is required');
 
         const duplicate = await moduleModel.findOne({
@@ -54,6 +55,7 @@ const update = async (req, res) => {
             name: name.trim(),
             url: url !== undefined ? (url?.trim() || null) : module.url,
             status: status ?? module.status,
+            icon : icon 
         });
         return ResponseService.success(res, 'Module updated successfully', module);
     } catch (error) {

@@ -21,6 +21,10 @@ export const moduleModel = sequelize.define("module_master", {
         allowNull: false,
         defaultValue: true,
     },
+    icon: {
+       type: DataTypes.STRING,
+        allowNull: true 
+    },
     is_deleted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
