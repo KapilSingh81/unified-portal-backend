@@ -32,6 +32,10 @@ export const menuModel = sequelize.define("menu_master", {
         allowNull: false,
         defaultValue: false,
     },
+    icon : {
+        type : DataTypes.STRING(100),
+        allowNull : true
+    }
 },
     {
         tableName: "menu_master",

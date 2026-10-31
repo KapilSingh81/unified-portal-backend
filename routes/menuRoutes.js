@@ -34,6 +34,9 @@ const menuRouter = express.Router();
  *               url:
  *                 type: string
  *                 example: /visitors/list
+ *               icon:
+ *                 type: string
+ *                 example: fa-users
  *               status:
  *                 type: boolean
  *     responses:
@@ -48,7 +51,7 @@ menuRouter.post('/create', Auth, Create);
  * @swagger
  * /api/menu/list:
  *   get:
- *     summary: List of menus
+ *     summary: List of menus (each menu includes its icon)
  *     tags: [Menu]
  *     parameters:
  *       - in: query
@@ -87,6 +90,9 @@ menuRouter.get('/list', Auth, List);
  *                 type: string
  *               url:
  *                 type: string
+ *               icon:
+ *                 type: string
+ *                 example: fa-users
  *               status:
  *                 type: boolean
  *     responses:

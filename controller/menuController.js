@@ -5,7 +5,7 @@ import { menuModel, moduleModel } from "../models/index.js";
 
 const Create = async (req, res) => {
     try {
-        const { module_id, name, url, status } = req.body;
+        const { module_id, name, url, icon, status } = req.body;
         if (!(module_id)) return ResponseService.badRequest(res, 'Valid module id is required');
         if (!isNonEmpty(name)) return ResponseService.badRequest(res, 'Menu name is required');
 
@@ -22,6 +22,7 @@ const Create = async (req, res) => {
             name: name.trim(),
             url: url?.trim() || null,
             status: status ?? true,
+            icon: icon || null,
         });
         return ResponseService.created(res, menu, 'Menu created successfully');
     } catch (error) {
@@ -57,7 +58,7 @@ const update = async (req, res) => {
         const menu = await menuModel.findOne({ where: { id, is_deleted: false } });
         if (!menu) return ResponseService.notFound(res, 'Menu not found');
 
-        const { name, url, status } = req.body;
+        const { name, url, icon, status } = req.body;
         if (!isNonEmpty(name)) return ResponseService.badRequest(res, 'Menu name is required');
 
         const duplicate = await menuModel.findOne({
@@ -69,6 +70,7 @@ const update = async (req, res) => {
             name: name.trim(),
             url: url !== undefined ? (url?.trim() || null) : menu.url,
             status: status ?? menu.status,
+            icon: icon !== undefined ? (icon|| null) : menu.icon,
         });
         return ResponseService.success(res, 'Menu updated successfully', menu);
     } catch (error) {
