@@ -7,8 +7,6 @@ import { roleModel, menuModel, rolePermissionMappingModel } from "../models/inde
 
 const FLAGS = ['can_view', 'can_edit', 'can_delete'];
 
-// Bulk upsert (Save): body = { role_id, permissions: [{ menu_id, can_view, can_edit, can_delete }] }
-// Jo flag nahi bheja, wo false maana jaata hai. Body me nahi aaye menus ko touch nahi kiya jaata.
 const Save = async (req, res) => {
     try {
         const { role_id, permissions } = req.body;
@@ -27,7 +25,7 @@ const Save = async (req, res) => {
                 }
                 row[f] = p[f] ?? false;
             }
-            byMenu.set(p.menu_id, row); // duplicate menu_id => last wins
+            byMenu.set(p.menu_id, row); 
         }
         const rows = [...byMenu.values()];
 
