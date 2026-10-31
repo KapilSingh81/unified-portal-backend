@@ -40,7 +40,7 @@ const List = async (req, res) => {
         }
         const menus = await menuModel.findAll({
             where,
-            include: [{ model: moduleModel, as: 'module', attributes: ['id', 'name', 'domain_id'], required: true }],
+            include: [{ model: moduleModel, as: 'module', attributes: ['id', 'name'], required: true }],
             order: [['name', 'ASC']],
         });
         return ResponseService.success(res, 'Success', menus);

@@ -15,19 +15,10 @@ const moduleRouter = express.Router();
  * @swagger
  * /api/module/list:
  *   get:
- *     summary: Get all modules of logged-in user's company (optionally filtered by domain)
+ *     summary: Get all modules
  *     tags: [Module]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: domain_id
- *         required: false
- *         description: Filter modules of a single domain
- *         schema:
- *           type: string
- *           format: uuid
- *         example: 3f2b8c1e-9a4d-4e6b-8f21-7c5d0a1b2e34
  *     responses:
  *       200:
  *         description: List of modules
@@ -51,10 +42,6 @@ const moduleRouter = express.Router();
  *                         type: string
  *                         format: uuid
  *                         example: 7a9c2e41-5b3d-4f8a-9e6c-2d1b0a3c4e5f
- *                       domain_id:
- *                         type: string
- *                         format: uuid
- *                         example: 3f2b8c1e-9a4d-4e6b-8f21-7c5d0a1b2e34
  *                       name:
  *                         type: string
  *                         example: Visitor Management
@@ -68,44 +55,29 @@ const moduleRouter = express.Router();
  *                       is_deleted:
  *                         type: boolean
  *                         example: false
- *                       domain:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                             format: uuid
- *                             example: 3f2b8c1e-9a4d-4e6b-8f21-7c5d0a1b2e34
- *                           name:
- *                             type: string
- *                             example: Wave Corp Portal
- *                           company_id:
- *                             type: string
- *                             format: uuid
- *                             example: 9b1d4a7c-2e3f-4c5a-8d6b-1f0e9a8b7c6d
  *       401:
  *         description: Unauthorized (missing/invalid token)
  *       500:
  *         description: Server error
  */
-moduleRouter.get('/list',Auth,  List);
+moduleRouter.get('/list', Auth, List);
 
 /**
  * @swagger
  * /api/module/create:
  *   post:
- *     summary: Create a module under a domain
+ *     summary: Create a module
  *     tags: [Module]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [domain_id, name]
+ *             required: [name]
  *             properties:
- *               domain_id:
- *                 type: string
- *                 format: uuid
  *               name:
  *                 type: string
  *                 example: Visitor Management
@@ -114,13 +86,18 @@ moduleRouter.get('/list',Auth,  List);
  *                 example: /visitors
  *               status:
  *                 type: boolean
+ *                 example: true
  *     responses:
  *       201:
  *         description: Module created successfully
- *       404:
- *         description: Domain not found
+ *       400:
+ *         description: Validation error / module already exists
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
  */
-moduleRouter.post('/create',Auth, Create);
+moduleRouter.post('/create', Auth, Create);
 
 /**
  * @swagger
@@ -128,6 +105,8 @@ moduleRouter.post('/create',Auth, Create);
  *   put:
  *     summary: Update a module
  *     tags: [Module]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -145,17 +124,26 @@ moduleRouter.post('/create',Auth, Create);
  *             properties:
  *               name:
  *                 type: string
+ *                 example: Visitor Management
  *               url:
  *                 type: string
+ *                 example: /visitors
  *               status:
  *                 type: boolean
+ *                 example: true
  *     responses:
  *       200:
  *         description: Module updated successfully
+ *       400:
+ *         description: Validation error / module name already exists
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Module not found
+ *       500:
+ *         description: Server error
  */
-moduleRouter.put('/update/:id',Auth, update);
+moduleRouter.put('/update/:id', Auth, update);
 
 /**
  * @swagger
@@ -163,6 +151,8 @@ moduleRouter.put('/update/:id',Auth, update);
  *   delete:
  *     summary: Delete a module (soft delete). Blocked if it has menus.
  *     tags: [Module]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -173,9 +163,15 @@ moduleRouter.put('/update/:id',Auth, update);
  *     responses:
  *       200:
  *         description: Module deleted successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Module not found
  *       409:
  *         description: Module has menus
+ *       500:
+ *         description: Server error
  */
-moduleRouter.delete('/delete/:id',Auth, deleteModule);
+moduleRouter.delete('/delete/:id', Auth, deleteModule);
 
 export default moduleRouter;
