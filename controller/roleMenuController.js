@@ -2,13 +2,11 @@ import { sequelize } from "../config/db.config.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid } from "../utils/validate.js";
 import { logAction } from "../utils/auditLog.js";
-import { findCompanyMenus } from "../utils/menuAccess.js";
 import { roleModel, menuModel, roleMenuMappingModel } from "../models/index.js";
 
-// Role ko accessible menus ka poora set replace karta hai (menu_ids: [] => sab hata do)
 const Assign = async (req, res) => {
     try {
-        const { role_id, menu_ids } = req.body;
+        const { role_id, menu_ids } = req.body;        
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
         if (!Array.isArray(menu_ids) || !menu_ids.every(isUuid)) {
             return ResponseService.badRequest(res, 'menu_ids must be an array of valid ids');
@@ -19,9 +17,9 @@ const Assign = async (req, res) => {
 
         const ids = [...new Set(menu_ids)];
         if (ids.length) {
-            const menus = await findCompanyMenus(role.company_id, ids);
-            if (menus.length !== ids.length) {
-                return ResponseService.badRequest(res, 'One or more menus are invalid or do not belong to this company');
+            const count = await menuModel.count({ where: { id: ids, is_deleted: false } });
+            if (count !== ids.length) {
+                return ResponseService.badRequest(res, 'One or more menus are invalid');
             }
         }
 
