@@ -30,7 +30,6 @@ const Create = async (req, res) => {
     }
 };
 
-// flat list; ?module_id=
 const List = async (req, res) => {
     try {
         const { module_id } = req.query;

@@ -2,7 +2,7 @@ import { sequelize } from "../config/db.config.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid } from "../utils/validate.js";
 import { logAction } from "../utils/auditLog.js";
-import { roleModel, menuModel, roleMenuMappingModel } from "../models/index.js";
+import { roleModel, menuModel, roleMenuMappingModel, moduleModel } from "../models/index.js";
 
 const Assign = async (req, res) => {
     try {
@@ -49,8 +49,16 @@ const List = async (req, res) => {
             menuModel.findAll({
                 where: { is_deleted: false },
                 attributes: ['id', 'name', 'url', 'icon', 'module_id', 'parent_menu_id'],
+                include: [{
+                    model: moduleModel,
+                    as: 'module',
+                    attributes: ['name'],
+                    required: true,
+                    where: { is_deleted: false },
+                }],
                 order: [['name', 'ASC']],
                 raw: true,
+                nest: true,
             }),
             roleMenuMappingModel.findAll({
                 where: { role_id },
@@ -60,7 +68,11 @@ const List = async (req, res) => {
         ]);
 
         const assignedIds = new Set(assigned.map((r) => r.menu_id));
-        const data = menus.map((m) => ({ ...m, checked: assignedIds.has(m.id) }));
+        const data = menus.map(({ module, ...m }) => ({
+            ...m,
+            module_name: module.name,
+            checked: assignedIds.has(m.id),
+        }));
 
         return ResponseService.success(res, 'Success', data);
     } catch (error) {
