@@ -45,15 +45,24 @@ const List = async (req, res) => {
         const { role_id } = req.query;
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
 
-        const rows = await roleMenuMappingModel.findAll({
-            where: { role_id },
-            include: [{
-                model: menuModel, as: 'menu', required: true,
-                attributes: ['id', 'name', 'url', 'module_id', 'parent_menu_id'],
+        const [menus, assigned] = await Promise.all([
+            menuModel.findAll({
                 where: { is_deleted: false },
-            }],
-        });
-        return ResponseService.success(res, 'Success', rows);
+                attributes: ['id', 'name', 'url', 'icon', 'module_id', 'parent_menu_id'],
+                order: [['name', 'ASC']],
+                raw: true,
+            }),
+            roleMenuMappingModel.findAll({
+                where: { role_id },
+                attributes: ['menu_id'],
+                raw: true,
+            }),
+        ]);
+
+        const assignedIds = new Set(assigned.map((r) => r.menu_id));
+        const data = menus.map((m) => ({ ...m, checked: assignedIds.has(m.id) }));
+
+        return ResponseService.success(res, 'Success', data);
     } catch (error) {
         return ResponseService.error(res, error.message);
     }

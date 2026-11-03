@@ -61,15 +61,33 @@ const List = async (req, res) => {
         const { role_id } = req.query;
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
 
-        const rows = await rolePermissionMappingModel.findAll({
-            where: { role_id },
-            include: [{
-                model: menuModel, as: 'menu', required: true,
-                attributes: ['id', 'name', 'url', 'module_id', 'parent_menu_id'],
+        const [menus, permissions] = await Promise.all([
+            menuModel.findAll({
                 where: { is_deleted: false },
-            }],
+                attributes: ['id', 'name', 'url', 'icon', 'module_id', 'parent_menu_id'],
+                order: [['name', 'ASC']],
+                raw: true,
+            }),
+            rolePermissionMappingModel.findAll({
+                where: { role_id },
+                attributes: ['id', 'menu_id', 'can_view', 'can_edit', 'can_delete'],
+                raw: true,
+            }),
+        ]);
+
+        const permByMenu = new Map(permissions.map((p) => [p.menu_id, p]));
+        const data = menus.map((m) => {
+            const p = permByMenu.get(m.id);
+            return {
+                ...m,
+                permission_id: p?.id ?? null,
+                can_view: p?.can_view ?? false,
+                can_edit: p?.can_edit ?? false,
+                can_delete: p?.can_delete ?? false,
+            };
         });
-        return ResponseService.success(res, 'Success', rows);
+
+        return ResponseService.success(res, 'Success', data);
     } catch (error) {
         return ResponseService.error(res, error.message);
     }

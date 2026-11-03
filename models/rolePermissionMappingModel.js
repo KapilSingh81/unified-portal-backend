@@ -1,7 +1,6 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/db.config.js";
 
-// Permission table skip kiya hai: har (role, menu) row me direct true/false flags.
 export const rolePermissionMappingModel = sequelize.define("role_permission_mapping", {
     id: {
         type: DataTypes.UUID,
