@@ -2,63 +2,67 @@ import { sequelize } from "../config/db.config.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid, isBool } from "../utils/validate.js";
 import { logAction } from "../utils/auditLog.js";
-import { findCompanyMenus } from "../utils/menuAccess.js";
-import { roleModel, menuModel, rolePermissionMappingModel } from "../models/index.js";
+import { roleModel, menuModel, moduleModel, rolePermissionMappingModel } from "../models/index.js";
 
-const FLAGS = ['can_view', 'can_edit', 'can_delete'];
+const FLAGS = ['can_view', 'can_add', 'can_edit', 'can_delete'];
 
+// Replaces the full set of menus + permissions of a role. permissions: [] removes everything.
 const Save = async (req, res) => {
     try {
         const { role_id, permissions } = req.body;
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
-        if (!Array.isArray(permissions) || permissions.length === 0) {
-            return ResponseService.badRequest(res, 'permissions must be a non-empty array');
-        }
+        if (!Array.isArray(permissions)) return ResponseService.badRequest(res, 'permissions must be an array');
 
         const byMenu = new Map();
         for (const p of permissions) {
             if (!p || !isUuid(p.menu_id)) return ResponseService.badRequest(res, 'Each permission needs a valid menu_id');
+
             const row = { menu_id: p.menu_id };
+            const anyFlagSent = FLAGS.some((f) => p[f] !== undefined);
             for (const f of FLAGS) {
                 if (p[f] !== undefined && !isBool(p[f])) {
                     return ResponseService.badRequest(res, `${f} must be true or false`);
                 }
                 row[f] = p[f] ?? false;
             }
-            byMenu.set(p.menu_id, row); 
+            if (!anyFlagSent) row.can_view = true;
+            if (row.can_add || row.can_edit || row.can_delete) row.can_view = true;
+
+            byMenu.set(p.menu_id, row);
         }
         const rows = [...byMenu.values()];
 
         const role = await roleModel.findOne({ where: { id: role_id, is_deleted: false } });
         if (!role) return ResponseService.notFound(res, 'Role not found');
 
-        const menus = await findCompanyMenus(role.company_id, rows.map((r) => r.menu_id));
-        if (menus.length !== rows.length) {
-            return ResponseService.badRequest(res, 'One or more menus are invalid or do not belong to this company');
+        if (rows.length) {
+            const count = await menuModel.count({ where: { id: rows.map((r) => r.menu_id), is_deleted: false } });
+            if (count !== rows.length) {
+                return ResponseService.badRequest(res, 'One or more menus are invalid');
+            }
         }
 
-        const existing = await rolePermissionMappingModel.findAll({ where: { role_id, menu_id: rows.map((r) => r.menu_id) } });
-        const existingByMenu = new Map(existing.map((e) => [e.menu_id, e]));
-        const oldValues = existing.map((e) => e.toJSON());
+        const oldValues = await rolePermissionMappingModel.findAll({ where: { role_id }, raw: true });
 
         await sequelize.transaction(async (transaction) => {
-            for (const r of rows) {
-                const found = existingByMenu.get(r.menu_id);
-                if (found) await found.update({ can_view: r.can_view, can_edit: r.can_edit, can_delete: r.can_delete }, { transaction });
-                else await rolePermissionMappingModel.create({ role_id, ...r }, { transaction });
+            await rolePermissionMappingModel.destroy({ where: { role_id }, transaction });
+            if (rows.length) {
+                await rolePermissionMappingModel.bulkCreate(rows.map((r) => ({ role_id, ...r })), { transaction });
             }
         });
 
-        await logAction({ userId: req.userId, tableName: 'role_permission_mapping', actionType: 'UPDATE', recordId: role_id, oldValues, newValues: rows });
-        return ResponseService.success(res, 'Permissions saved successfully', rows);
+        await logAction({
+            userId: req.userId, tableName: 'role_permission_mapping', actionType: 'UPDATE',
+            recordId: role_id, oldValues, newValues: rows,
+        });
+        return ResponseService.success(res, 'Role permissions saved successfully', { role_id, permissions: rows });
     } catch (error) {
         return ResponseService.error(res, error.message);
     }
 };
 
+// All menus with module name. checked = menu mapped to the role.
 const List = async (req, res) => {
-    console.log("chekc");
-    
     try {
         const { role_id } = req.query;
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
@@ -67,25 +71,32 @@ const List = async (req, res) => {
             menuModel.findAll({
                 where: { is_deleted: false },
                 attributes: ['id', 'name', 'url', 'icon', 'module_id', 'parent_menu_id'],
+                include: [{
+                    model: moduleModel, as: 'module', attributes: ['name'],
+                    required: true, where: { is_deleted: false },
+                }],
                 order: [['name', 'ASC']],
                 raw: true,
+                nest: true,
             }),
             rolePermissionMappingModel.findAll({
                 where: { role_id },
-                attributes: ['id', 'menu_id', 'can_view', 'can_edit', 'can_delete'],
+                attributes: ['id', 'menu_id', ...FLAGS],
                 raw: true,
             }),
         ]);
 
         const permByMenu = new Map(permissions.map((p) => [p.menu_id, p]));
-        const data = menus.map((m) => {
+        const data = menus.map(({ module, ...m }) => {
             const p = permByMenu.get(m.id);
+            const flags = Object.fromEntries(FLAGS.map((f) => [f, p?.[f] ?? false]));
             return {
                 ...m,
+                module_name: module.name,
+                checked: !!p,
                 permission_id: p?.id ?? null,
-                can_view: p?.can_view ?? false,
-                can_edit: p?.can_edit ?? false,
-                can_delete: p?.can_delete ?? false,
+                ...flags,
+                all_access: FLAGS.every((f) => flags[f]),
             };
         });
 
