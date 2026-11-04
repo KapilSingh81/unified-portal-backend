@@ -12,12 +12,12 @@ import roleRouter from "./routes/roleRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import parentUserRouter from "./routes/parentUserRoutes.js";
 import roleMenuRouter from "./routes/roleMenuRoutes.js";
-// import rolePermissionRouter from "./routes/rolePermissionRoutes.js";
 import logRouter from "./routes/logRoutes.js";
 import "./models/index.js"; 
 import authRouter from "./routes/authRoutes.js";
 import commonRouter from "./routes/commonRoutes.js";
 import dashboardRouter from "./routes/paymentRoutes.js";
+import rolePermissionRouter from "./routes/roleMenuRoutes.js";
 
 const app = express();
 
@@ -34,7 +34,7 @@ app.use("/api/role", roleRouter);
 app.use("/api/user", userRouter);
 app.use("/api/parent-user", parentUserRouter);
 app.use("/api/role-menu", roleMenuRouter);
-// app.use("/api/role-permission", rolePermissionRouter);
+app.use("/api/role-permission", rolePermissionRouter);
 app.use("/api/log", logRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/common", commonRouter);

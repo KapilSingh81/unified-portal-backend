@@ -57,6 +57,8 @@ const Save = async (req, res) => {
 };
 
 const List = async (req, res) => {
+    console.log("chekc");
+    
     try {
         const { role_id } = req.query;
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
