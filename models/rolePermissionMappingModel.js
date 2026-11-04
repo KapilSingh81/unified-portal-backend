@@ -18,6 +18,7 @@ export const rolePermissionMappingModel = sequelize.define("role_permission_mapp
         allowNull: false,
         references: { model: 'menu_master', key: 'id' },
     },
+    can_add: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     can_view: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

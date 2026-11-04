@@ -1,54 +1,77 @@
 import express from 'express';
-import { Assign, List } from '../controller/roleMenuController.js';
+import { Save, List, remove } from '../controller/rolePermissionController.js';
 import Auth from '../middleware/auth.js';
 
-const roleMenuRouter = express.Router();
+const rolePermissionRouter = express.Router();
 
 /**
  * @swagger
  * tags:
- *   name: RoleMenuMapping
- *   description: Menus accessible to the role.
+ *   name: RolePermission
+ *   description: Menus assigned to a role with view, add, edit and delete permissions.
  */
 
 /**
  * @swagger
- * /api/role-menu/assign:
+ * /api/role-permission/save:
  *   post:
- *     summary: Replace the full set of menus of a role (menu_ids [] removes all)
- *     tags: [RoleMenuMapping]
+ *     summary: Replace the full set of menus and permissions of a role (permissions [] removes all)
+ *     description: >
+ *       Menu mapping and its access are saved together. If a menu is sent without any flag,
+ *       can_view defaults to true. can_add, can_edit or can_delete true forces can_view true.
+ *     tags: [RolePermission]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [role_id, menu_ids]
+ *             required: [role_id, permissions]
  *             properties:
  *               role_id:
  *                 type: string
  *                 format: uuid
- *               menu_ids:
+ *               permissions:
  *                 type: array
  *                 items:
- *                   type: string
- *                   format: uuid
+ *                   type: object
+ *                   required: [menu_id]
+ *                   properties:
+ *                     menu_id:
+ *                       type: string
+ *                       format: uuid
+ *                     can_view:
+ *                       type: boolean
+ *                       default: false
+ *                     can_add:
+ *                       type: boolean
+ *                       default: false
+ *                     can_edit:
+ *                       type: boolean
+ *                       default: false
+ *                     can_delete:
+ *                       type: boolean
+ *                       default: false
  *     responses:
  *       200:
- *         description: Role menus updated successfully
+ *         description: Role permissions saved successfully
  *       400:
- *         description: Invalid menus or menus of another company
+ *         description: Invalid role id, invalid menus or invalid flag values
  *       404:
  *         description: Role not found
  */
-roleMenuRouter.post('/assign', Auth, Assign);
+rolePermissionRouter.post('/save', Auth, Save);
 
 /**
  * @swagger
- * /api/role-menu/list:
+ * /api/role-permission/list:
  *   get:
- *     summary: Menus assigned to a role
- *     tags: [RoleMenuMapping]
+ *     summary: All menus with module name; checked is true for menus assigned to the role
+ *     tags: [RolePermission]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: role_id
@@ -58,8 +81,90 @@ roleMenuRouter.post('/assign', Auth, Assign);
  *           format: uuid
  *     responses:
  *       200:
- *         description: List of role-menu mappings with menu details
+ *         description: All menus with checked and permission flags for the role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                         example: Users
+ *                       url:
+ *                         type: string
+ *                         nullable: true
+ *                       icon:
+ *                         type: string
+ *                         nullable: true
+ *                       module_id:
+ *                         type: string
+ *                         format: uuid
+ *                       module_name:
+ *                         type: string
+ *                         example: Master
+ *                       parent_menu_id:
+ *                         type: string
+ *                         format: uuid
+ *                         nullable: true
+ *                       checked:
+ *                         type: boolean
+ *                       permission_id:
+ *                         type: string
+ *                         format: uuid
+ *                         nullable: true
+ *                       can_view:
+ *                         type: boolean
+ *                       can_add:
+ *                         type: boolean
+ *                       can_edit:
+ *                         type: boolean
+ *                       can_delete:
+ *                         type: boolean
+ *                       all_access:
+ *                         type: boolean
+ *                         description: true when view, add, edit and delete are all true
+ *       400:
+ *         description: Valid role id is required
  */
-roleMenuRouter.get('/list', Auth, List);
+rolePermissionRouter.get('/list', Auth, List);
 
-export default roleMenuRouter;
+/**
+ * @swagger
+ * /api/role-permission/{id}:
+ *   delete:
+ *     summary: Remove one role permission mapping by its id (permission_id from the list API)
+ *     tags: [RolePermission]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Permission mapping removed successfully
+ *       400:
+ *         description: Valid id is required
+ *       404:
+ *         description: Permission mapping not found
+ */
+rolePermissionRouter.delete('/:id', Auth, remove);
+
+export default rolePermissionRouter;
