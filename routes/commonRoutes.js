@@ -1,6 +1,6 @@
 import express from "express";
 import Auth from "../middleware/auth.js";
-import { companyDDList, roleDDList, domainDDList, moduleDDList } from "../controller/commonController.js";
+import { companyDDList, roleDDList, domainDDList, moduleDDList, userDDList } from "../controller/commonController.js";
 
 const commonRouter = express.Router();
 
@@ -86,5 +86,56 @@ commonRouter.get("/domainDDList", Auth, domainDDList);
  *         description: Invalid domain id
  */
 commonRouter.get("/moduleDDList/:domain_id", Auth, moduleDDList);
+
+/**
+ * @swagger
+ * /api/common/userDDList/{company_id}:
+ *   get:
+ *     summary: User dropdown list for a company (id, name and role_id)
+ *     tags: [Common]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: company_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Company id
+ *     responses:
+ *       200:
+ *         description: List of active users of the company
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                         example: Rahul Sharma
+ *                       role_id:
+ *                         type: string
+ *                         format: uuid
+ *       400:
+ *         description: Invalid company id
+ *       403:
+ *         description: Access denied
+ */
+commonRouter.get("/userDDList/:company_id", Auth, userDDList);
 
 export default commonRouter;

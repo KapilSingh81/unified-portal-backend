@@ -3,6 +3,7 @@ import { domainModel } from "../models/domainModel.js";
 import { moduleModel } from "../models/moudleModel.js";
 import { roleModel } from "../models/roleModel.js";
 import ResponseService from "../utils/httpService.js";
+import { isUuid } from "../utils/validate.js";
 
 export const companyDDList = async (req, res) => {
     try {
@@ -68,6 +69,30 @@ export const moduleDDList = async (req, res) => {
         return ResponseService.success(res, 'Success', modules);
     } catch (error) {
         console.error(error.message);
+        return ResponseService.error(res, error.message);
+    }
+};
+
+
+export const userDDList = async (req, res) => {
+    try {
+        const { company_id } = req.params;
+        if (!isUuid(company_id)) {
+            return ResponseService.badRequest(res, 'Valid company id is required');
+        }
+
+        if (req.companyId && req.companyId !== company_id) {
+            return ResponseService.forbidden(res, 'Access denied');
+        }
+
+        const users = await userModel.findAll({
+            where: { company_id, is_deleted: false, status: true },
+            attributes: ['id', 'name', 'role_id'],
+            order: [['name', 'ASC']],
+            raw: true,
+        });
+        return ResponseService.success(res, 'Success', users);
+    } catch (error) {
         return ResponseService.error(res, error.message);
     }
 };
