@@ -139,7 +139,6 @@ const deleteUser = async (req, res) => {
         const oldValues = user.toJSON();
         delete oldValues.password;
         await sequelize.transaction(async (transaction) => {
-            // parent/child links hata do, user soft delete
             await parentUserMappingModel.destroy({
                 where: { [Op.or]: [{ parent_user_id: id }, { child_user_id: id }] },
                 transaction,
