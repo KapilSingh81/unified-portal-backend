@@ -2,6 +2,7 @@ import { companyModel } from "../models/companyModel.js";
 import { domainModel } from "../models/domainModel.js";
 import { moduleModel } from "../models/moudleModel.js";
 import { roleModel } from "../models/roleModel.js";
+import { userModel } from "../models/userModel.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid } from "../utils/validate.js";
 
@@ -82,17 +83,20 @@ export const userDDList = async (req, res) => {
         }
 
         if (req.companyId && req.companyId !== company_id) {
-            return ResponseService.forbidden(res, 'Access denied');
+            return res.status(403).json({ success: false, message: 'Access denied', errors: 403 });
         }
 
         const users = await userModel.findAll({
             where: { company_id, is_deleted: false, status: true },
-            attributes: ['id', 'name', 'role_id'],
-            order: [['name', 'ASC']],
+            attributes: ['id', 'user_name', 'role_id'],
+            order: [['user_name', 'ASC']],
             raw: true,
         });
+
         return ResponseService.success(res, 'Success', users);
     } catch (error) {
-        return ResponseService.error(res, error.message);
+        const dbMessages = error.original?.errors?.map((e) => e.message);
+        console.error('userDDList error:', dbMessages ?? error.message);
+        return ResponseService.error(res, dbMessages?.join(' | ') ?? error.message);
     }
 };
