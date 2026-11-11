@@ -58,16 +58,29 @@ export const buildUserMenus = async (userId, roleId) => {
         }
     }
 
-    // modules that have no menus at all (e.g. Dashboard)
+    // shape that the sidebar (MenuItem) already understands
+    const toItem = (m) => ({
+        id: m.id,
+        label: m.name,
+        route: m.url ?? undefined,
+        iconPath: m.icon ?? undefined,
+        can_view: m.can_view,
+        can_add: m.can_add,
+        can_edit: m.can_edit,
+        can_delete: m.can_delete,
+        children: m.children.length ? m.children.map(toItem) : undefined,
+    });
+
     const modulesWithMenus = new Set(menus.map((m) => m.module_id));
 
     const data = modules
         .filter((m) => !modulesWithMenus.has(m.id) || rootsByModule.has(m.id))
-        .map((m) => ({
-            ...m,
-            has_menus: modulesWithMenus.has(m.id),
-            menus: rootsByModule.get(m.id) ?? [],
-        }));
+        .map((m) => {
+            const roots = rootsByModule.get(m.id) ?? [];
+            return roots.length
+                ? { id: m.id, label: m.name, iconPath: m.icon ?? undefined, children: roots.map(toItem) }
+                : { id: m.id, label: m.name, route: m.url ?? undefined, iconPath: m.icon ?? undefined };
+        });
 
     return { is_admin: isAdmin, modules: data };
 };
