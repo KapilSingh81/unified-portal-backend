@@ -4,22 +4,31 @@ import { sequelize } from "../config/db.config.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid, isNonEmpty } from "../utils/validate.js";
 import { logAction } from "../utils/auditLog.js";
-import { companyModel, roleModel, userModel, parentUserMappingModel } from "../models/index.js";
+import {
+    companyModel, roleModel, userModel, parentUserMappingModel,
+} from "../models/index.js";
+import { userPermissionMappingModel } from "../models/userPermissionModel.js";
+import { provisionEmployee } from "../utils/helper.js";
 
 const SAFE_ATTRS = { exclude: ['password'] };
 const INCLUDE = [
     { model: roleModel, as: 'role', attributes: ['id', 'name'] },
     { model: companyModel, as: 'company', attributes: ['id', 'name'] },
 ];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Create = async (req, res) => {
     try {
-        const { company_id, role_id, user_name, password, status } = req.body;
+        const { company_id, role_id, user_name, password, status, firstName, lastName, email, contact } = req.body;
         if (!isUuid(company_id)) return ResponseService.badRequest(res, 'Valid company id is required');
         if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Valid role id is required');
         if (!isNonEmpty(user_name)) return ResponseService.badRequest(res, 'User name is required');
         if (!isNonEmpty(password) || password.length < 6) {
             return ResponseService.badRequest(res, 'Password is required (min 6 characters)');
+        }
+        if (!isNonEmpty(firstName)) return ResponseService.badRequest(res, 'First name is required');
+        if (!isNonEmpty(email) || !EMAIL_RE.test(email.trim())) {
+            return ResponseService.badRequest(res, 'Valid email is required');
         }
 
         const company = await companyModel.findOne({ where: { id: company_id, is_deleted: false } });
@@ -31,16 +40,36 @@ const Create = async (req, res) => {
         const exists = await userModel.findOne({ where: { company_id, user_name: user_name.trim(), is_deleted: false } });
         if (exists) return ResponseService.badRequest(res, 'User name already exist');
 
+        const emailLower = email.trim().toLowerCase();
+        const emailExists = await userModel.findOne({ where: { email: emailLower, is_deleted: false } });
+        if (emailExists) return ResponseService.badRequest(res, 'Email already exist');
+
         const user = await userModel.create({
             company_id,
             role_id,
             user_name: user_name.trim(),
             password: await bcrypt.hash(password, 10),
             status: status ?? true,
+            first_name: firstName.trim(),
+            last_name: lastName?.trim() || null,
+            email: emailLower,
+            contact: contact?.trim() || null,
         });
         const data = user.toJSON();
         delete data.password;
         await logAction({ userId: req.userId, tableName: 'user_master', actionType: 'CREATE', recordId: user.id, newValues: data });
+        const provision = await provisionEmployee({
+            centralUserId: user.id,
+            roleId: role.central_role_id ?? 0,
+            userName: user.user_name,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            contact: user.contact,
+        });
+        if (!provision.ok) {
+            console.error('ProvisionEmployee failed:', provision.error);
+        }
         return ResponseService.created(res, data, 'User created successfully');
     } catch (error) {
         return ResponseService.error(res, error.message);
@@ -63,7 +92,7 @@ const List = async (req, res) => {
             where,
             attributes: SAFE_ATTRS,
             include: INCLUDE,
-            order: [['user_name', 'ASC']],
+            order: [['first_name', 'ASC'], ['user_name', 'ASC']],
         });
         return ResponseService.success(res, 'Success', users);
     } catch (error) {
@@ -91,8 +120,9 @@ const update = async (req, res) => {
         const user = await userModel.findOne({ where: { id, is_deleted: false } });
         if (!user) return ResponseService.notFound(res, 'User not found');
 
-        const { user_name, role_id, password, status } = req.body;
+        const { user_name, role_id, password, status, firstName, lastName, email, contact } = req.body;
         const changes = {};
+        let roleChanged = false;
 
         if (user_name !== undefined) {
             if (!isNonEmpty(user_name)) return ResponseService.badRequest(res, 'User name cannot be empty');
@@ -106,7 +136,10 @@ const update = async (req, res) => {
             if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Invalid role id');
             const role = await roleModel.findOne({ where: { id: role_id, company_id: user.company_id, is_deleted: false } });
             if (!role) return ResponseService.notFound(res, 'Role not found for this company');
-            changes.role_id = role_id;
+            if (role_id !== user.role_id) {
+                changes.role_id = role_id;
+                roleChanged = true;
+            }
         }
         if (password !== undefined) {
             if (!isNonEmpty(password) || password.length < 6) {
@@ -116,9 +149,34 @@ const update = async (req, res) => {
         }
         if (status !== undefined) changes.status = status;
 
+        if (firstName !== undefined) {
+            if (!isNonEmpty(firstName)) return ResponseService.badRequest(res, 'First name cannot be empty');
+            changes.first_name = firstName.trim();
+        }
+        if (lastName !== undefined) changes.last_name = lastName?.trim() || null;
+        if (email !== undefined) {
+            if (!isNonEmpty(email) || !EMAIL_RE.test(email.trim())) {
+                return ResponseService.badRequest(res, 'Valid email is required');
+            }
+            const emailLower = email.trim().toLowerCase();
+            const emailExists = await userModel.findOne({
+                where: { email: emailLower, is_deleted: false, id: { [Op.ne]: id } },
+            });
+            if (emailExists) return ResponseService.badRequest(res, 'Email already exist');
+            changes.email = emailLower;
+        }
+        if (contact !== undefined) changes.contact = contact?.trim() || null;
+
         const oldValues = user.toJSON();
         delete oldValues.password;
-        await user.update(changes);
+
+        await sequelize.transaction(async (transaction) => {
+            await user.update(changes, { transaction });
+            if (roleChanged) {
+                await userPermissionMappingModel.destroy({ where: { user_id: id }, transaction });
+            }
+        });
+
         const data = user.toJSON();
         delete data.password;
         await logAction({ userId: req.userId, tableName: 'user_master', actionType: 'UPDATE', recordId: id, oldValues, newValues: data });
@@ -143,6 +201,7 @@ const deleteUser = async (req, res) => {
                 where: { [Op.or]: [{ parent_user_id: id }, { child_user_id: id }] },
                 transaction,
             });
+            await userPermissionMappingModel.destroy({ where: { user_id: id }, transaction });
             await user.update({ is_deleted: true }, { transaction });
         });
         await logAction({ userId: req.userId, tableName: 'user_master', actionType: 'DELETE', recordId: id, oldValues });

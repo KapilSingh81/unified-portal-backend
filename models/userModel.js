@@ -18,6 +18,23 @@ export const userModel = sequelize.define("user_master", {
         allowNull: false,
         references: { model: 'role_master', key: 'id' },
     },
+    first_name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+    },
+    last_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+    },
+    email: {
+        type: DataTypes.STRING(150),
+        allowNull: false,
+        validate: { isEmail: true },
+    },
+    contact: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+    },
     user_name: {
         type: DataTypes.STRING(100),
         allowNull: false,
