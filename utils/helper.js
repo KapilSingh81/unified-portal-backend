@@ -10,9 +10,9 @@ export const provisionEmployee = async ({ centralUserId, roleId, userName, first
                 roleId,
                 userName,
                 firstName,
-                lastName: lastName ?? '',
+                lastName: lastName ?? null,
                 email,
-                contact: contact ?? '',
+                contact: contact ?? null,
             }),
             signal: AbortSignal.timeout(10000), 
         });
