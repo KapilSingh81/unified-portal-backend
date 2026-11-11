@@ -17,7 +17,7 @@ const Dashboard = async (req, res) => {
         const isAdmin = ADMIN_ROLES.includes(role.name.trim().toLowerCase());
 
         const modules = await moduleModel.findAll({
-            where: { is_deleted: false },
+            where: { is_deleted: false, is_portal: false },
             attributes: ['id', 'name'],
             order: [['name', 'ASC']],
             raw: true,

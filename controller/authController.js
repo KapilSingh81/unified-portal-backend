@@ -4,6 +4,7 @@ import { companyModel } from "../models/companyModel.js";
 import { roleModel } from "../models/roleModel.js";
 import { userModel } from "../models/userModel.js";
 import ResponseService from "../utils/httpService.js";
+import { buildUserMenus } from "./portelMenuContoller.js";
 
 export const login = async (req, res) => {
     try {
@@ -23,24 +24,39 @@ export const login = async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, isUser.password);
         if (!isMatch) return ResponseService.badRequest(res, 'Invalid username or password');
+        const access = await buildUserMenus(isUser.id, isUser.role_id);
 
+        // const token = jwt.sign(
+        //     { id: isUser.id, company_id: isUser.company_id, role_id: isUser.role_id },
+        //     process.env.JWT_SECRET,
+        //     { expiresIn: "1d" }
+        // );
         const token = jwt.sign(
-            { id: isUser.id, company_id: isUser.company_id, role_id: isUser.role_id },
+            {
+                id: isUser.id,
+                company_id: isUser.company_id,
+                role_id: isUser.role_id
+            },
             process.env.JWT_SECRET,
-            { expiresIn: "1d" }
+            {
+                algorithm: "HS256",
+                issuer: "Skylabs",
+                audience: "SkylabsGPS",
+                subject: String(isUser.id),
+                expiresIn: "1d"
+            },
         );
-
         const user = isUser.toJSON();
         delete user.password;
         delete user.role_id;
         delete user.company_id;
-        return ResponseService.success(res, 'Login successfully', { user, token });
+        return ResponseService.success(res, 'Login successfully', { user, token, access });
     } catch (err) {
         console.error(err.message);
         return ResponseService.error(res, err.message);
     }
 };
 
-export const logout = async(req, res) => {
+export const logout = async (req, res) => {
 
 }

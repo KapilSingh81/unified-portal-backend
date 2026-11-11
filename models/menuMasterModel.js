@@ -47,7 +47,6 @@ export const menuModel = sequelize.define("menu_master", {
 menuModel.belongsTo(moduleModel, { foreignKey: "module_id", as: "module" });
 moduleModel.hasMany(menuModel, { foreignKey: "module_id", as: "menus" });
 
-// self relation (parent_of). NO ACTION because MSSQL does not allow SET NULL/CASCADE on self-reference.
 const selfFk = { foreignKey: "parent_menu_id", onDelete: "NO ACTION", onUpdate: "NO ACTION" };
 menuModel.belongsTo(menuModel, { ...selfFk, as: "parent" });
 menuModel.hasMany(menuModel, { ...selfFk, as: "children" });

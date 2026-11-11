@@ -30,6 +30,7 @@ export const moduleModel = sequelize.define("module_master", {
         allowNull: false,
         defaultValue: false,
     },
+    is_portal: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
 },
     {
         tableName: "module_master",
