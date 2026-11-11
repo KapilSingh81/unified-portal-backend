@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import ResponseService from "../utils/httpService.js";
+import { revokedTokenModel } from "../models/revokedTokenModel.js";
+import { hashToken } from "../utils/permission.js";
 
 const Auth = async (req, res, next) => {
     try {
@@ -29,6 +31,16 @@ const Auth = async (req, res, next) => {
         }
         if (!decoded.role_id) {
             return ResponseService.unauthorized(res, "Role not assigned, contact admin");
+        }
+
+        // revoked token check (token was logged out)
+        const revoked = await revokedTokenModel.findOne({
+            where: { token_hash: hashToken(token) },
+            attributes: ['id'],
+            raw: true,
+        });
+        if (revoked) {
+            return ResponseService.unauthorized(res, "Session expired - Please login again");
         }
 
         req.userId = decoded.id;

@@ -1,5 +1,6 @@
 import { rolePermissionMappingModel } from "../models/index.js";
 import { userPermissionMappingModel } from "../models/userPermissionModel.js";
+import crypto from "crypto";
 
 export const FLAGS = ['can_view', 'can_add', 'can_edit', 'can_delete'];
 
@@ -14,3 +15,6 @@ export const getEffectivePermissions = async (userId, roleId) => {
     for (const p of userPerms) result.set(p.menu_id, { ...p, source: 'user' });
     return result;
 };
+
+
+export const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
