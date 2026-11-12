@@ -2,7 +2,7 @@ import "dotenv/config";
 
 export const provisionEmployee = async ({ centralUserId, roleId, userName, firstName, lastName, email, contact }) => {
     try {
-        const response = await fetch(`${process.env.CENTRAL_AUTH_URL}/api/CentralAuth/ProvisionEmployee`, {
+        const response = await fetch(`${process.env.VAHAN_AUTH_URL}/api/CentralAuth/ProvisionEmployee`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', accept: 'text/plain' },
             body: JSON.stringify({
@@ -29,7 +29,7 @@ export const provisionEmployee = async ({ centralUserId, roleId, userName, first
 
 export const syncUserPermissions = async ({ token, centralUserId, centralRoleId, permissionVersion, permissions }) => {
     try {
-        const response = await fetch(`${process.env.CENTRAL_AUTH_URL}/api/CentralAuth/SyncUserPermissions`, {
+        const response = await fetch(`${process.env.VAHAN_AUTH_URL}/api/CentralAuth/SyncUserPermissions`, {
             method: 'POST',
             headers: {
                 accept: '*/*',
