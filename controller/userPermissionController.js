@@ -5,6 +5,7 @@ import { logAction } from "../utils/auditLog.js";
 import { userModel, menuModel, moduleModel } from "../models/index.js";
 import { FLAGS, getEffectivePermissions } from "../utils/permission.js";
 import { userPermissionMappingModel } from "../models/userPermissionModel.js";
+import { syncUserPermissions } from "../utils/helper.js";
 
 // Saves the admin's decision for a user. Rows are stored with the user's current role_id.
 // permissions: [] clears all overrides (user follows the role).
@@ -51,6 +52,17 @@ const Save = async (req, res) => {
             userId: req.userId, tableName: 'user_permission_mapping', actionType: 'UPDATE',
             recordId: user_id, oldValues, newValues: rows,
         });
+        const sync = await syncUserPermissions({
+            token,
+            centralUserId: user_id,
+            centralRoleId: role_id,
+            permissionVersion: 1,
+            permissions: rows,
+        });
+        if (!sync.ok) {
+            console.error('SyncUserPermissions failed:', sync.error);
+        }
+
         return ResponseService.success(res, 'User permissions saved successfully', { user_id, role_id, permissions: rows });
     } catch (error) {
         return ResponseService.error(res, error.message);
