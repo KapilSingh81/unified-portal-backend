@@ -1,9 +1,9 @@
 import { menuModel } from "../models/menuMasterModel.js";
 import { moduleModel } from "../models/moudleModel.js";
 import { userModulePaymentModel } from "../models/paymentModel.js";
-import { roleMenuMappingModel } from "../models/roleMenuMappingModel.js";
 import { roleModel } from "../models/roleModel.js";
 import ResponseService from "../utils/httpService.js";
+import { FLAGS, getEffectivePermissions } from "../utils/permission.js";
 
 const ADMIN_ROLES = ['admin', 'super admin', 'superadmin'];
 
@@ -16,47 +16,71 @@ const Dashboard = async (req, res) => {
         if (!role) return ResponseService.notFound(res, 'Role not found');
         const isAdmin = ADMIN_ROLES.includes(role.name.trim().toLowerCase());
 
+        // third-party modules only (portal modules come from /api/my-menus)
         const modules = await moduleModel.findAll({
             where: { is_deleted: false, is_portal: false },
-            attributes: ['id', 'name'],
+            attributes: ['id', 'domain_id', 'name', 'url', 'icon'],
             order: [['name', 'ASC']],
             raw: true,
         });
+        const moduleIds = modules.map((m) => m.id);
 
-        const allMenus = await menuModel.findAll({
-            where: { is_deleted: false },
-            attributes: ['id', 'module_id'],
-            raw: true,
-        });
+        const allMenus = moduleIds.length
+            ? await menuModel.findAll({
+                where: { is_deleted: false, module_id: moduleIds },
+                attributes: ['id', 'module_id'],
+                raw: true,
+            })
+            : [];
+
         const totalByModule = new Map();
         for (const m of allMenus) {
             totalByModule.set(m.module_id, (totalByModule.get(m.module_id) || 0) + 1);
         }
 
         const accessByModule = new Map();
-        let paidByModule = new Map();
+        const paymentByModule = new Map();
 
         if (!isAdmin) {
-            const assigned = await roleMenuMappingModel.findAll({ where: { role_id: roleId }, attributes: ['menu_id'], raw: true });
-            const assignedIds = new Set(assigned.map((a) => a.menu_id));
-
+            // role permission, overridden by user permission
+            const effective = await getEffectivePermissions(userId, roleId);
             for (const m of allMenus) {
-                if (assignedIds.has(m.id)) {
+                const p = effective.get(m.id);
+                if (p && FLAGS.some((f) => p[f])) {
                     accessByModule.set(m.module_id, (accessByModule.get(m.module_id) || 0) + 1);
                 }
             }
 
-            const payments = await userModulePaymentModel.findAll({ where: { user_id: userId }, attributes: ['module_id', 'is_paid'], raw: true });
-            paidByModule = new Map(payments.map((p) => [p.module_id, p.is_paid]));
+            // paid only between starts_at and expires_at
+            const payments = await userModulePaymentModel.findAll({
+                where: { user_id: userId },
+                attributes: ['module_id', 'is_paid', 'starts_at', 'expires_at'],
+                raw: true,
+            });
+            const now = new Date();
+            for (const p of payments) {
+                const active = p.is_paid
+                    && (!p.starts_at || new Date(p.starts_at) <= now)
+                    && (!p.expires_at || new Date(p.expires_at) > now);
+                paymentByModule.set(p.module_id, { active, expires_at: p.expires_at ?? null });
+            }
         }
 
         const data = modules.map((m) => {
+            const total_menus = totalByModule.get(m.id) || 0;
+
             if (isAdmin) {
-                return { ...m, menu_count: totalByModule.get(m.id) || 0, has_access: true, is_payment: true, state: 'ACCESS_GRANTED', message: null };
+                return {
+                    ...m, menu_count: total_menus, total_menus,
+                    has_access: true, is_payment: true, expires_at: null,
+                    state: 'ACCESS_GRANTED', message: null,
+                };
             }
+
             const menu_count = accessByModule.get(m.id) || 0;
             const has_access = menu_count > 0;
-            const is_payment = paidByModule.get(m.id) === true;
+            const pay = paymentByModule.get(m.id);
+            const is_payment = pay?.active === true;
 
             let state = 'ACCESS_GRANTED';
             let message = null;
@@ -67,11 +91,22 @@ const Dashboard = async (req, res) => {
                 state = 'PAYMENT_PENDING';
                 message = 'Please complete the payment to use this module';
             }
-            return { ...m, menu_count, has_access, is_payment, state, message };
+            return {
+                ...m, menu_count, total_menus, has_access, is_payment,
+                expires_at: is_payment ? pay.expires_at : null,
+                state, message,
+            };
         });
 
-        return ResponseService.success(res, 'Success', { is_admin: isAdmin, modules: data });
+        const summary = {
+            total_modules: data.length,
+            accessible_modules: data.filter((d) => d.state === 'ACCESS_GRANTED').length,
+            accessible_menus: data.reduce((sum, d) => sum + d.menu_count, 0),
+        };
+
+        return ResponseService.success(res, 'Success', { is_admin: isAdmin, summary, modules: data });
     } catch (error) {
+        console.error('Dashboard error:', error);
         return ResponseService.error(res, error.message);
     }
 };
