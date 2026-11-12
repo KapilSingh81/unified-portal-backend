@@ -15,10 +15,22 @@ const moduleRouter = express.Router();
  * @swagger
  * /api/module/list:
  *   get:
- *     summary: Get all modules
+ *     summary: Get all modules (optionally filter by domain_id or is_portal)
  *     tags: [Module]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: domain_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: is_portal
+ *         required: false
+ *         schema:
+ *           type: boolean
  *     responses:
  *       200:
  *         description: List of modules
@@ -42,6 +54,9 @@ const moduleRouter = express.Router();
  *                         type: string
  *                         format: uuid
  *                         example: 7a9c2e41-5b3d-4f8a-9e6c-2d1b0a3c4e5f
+ *                       domain_id:
+ *                         type: string
+ *                         format: uuid
  *                       name:
  *                         type: string
  *                         example: Visitor Management
@@ -52,13 +67,17 @@ const moduleRouter = express.Router();
  *                       icon:
  *                         type: string
  *                         nullable: true
- *                         example: 
  *                       status:
  *                         type: boolean
  *                         example: true
+ *                       is_portal:
+ *                         type: boolean
+ *                         example: false
  *                       is_deleted:
  *                         type: boolean
  *                         example: false
+ *       400:
+ *         description: Invalid domain id or is_portal
  *       401:
  *         description: Unauthorized (missing/invalid token)
  *       500:
@@ -70,7 +89,7 @@ moduleRouter.get('/list', Auth, List);
  * @swagger
  * /api/module/create:
  *   post:
- *     summary: Create a module
+ *     summary: Create a module (domain_id is required)
  *     tags: [Module]
  *     security:
  *       - bearerAuth: []
@@ -80,8 +99,11 @@ moduleRouter.get('/list', Auth, List);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name]
+ *             required: [name, domain_id]
  *             properties:
+ *               domain_id:
+ *                 type: string
+ *                 format: uuid
  *               name:
  *                 type: string
  *                 example: Visitor Management
@@ -90,10 +112,12 @@ moduleRouter.get('/list', Auth, List);
  *                 example: /visitors
  *               icon:
  *                 type: string
- *                 example: 
  *               status:
  *                 type: boolean
  *                 example: true
+ *               is_portal:
+ *                 type: boolean
+ *                 default: false
  *     responses:
  *       201:
  *         description: Module created successfully
@@ -101,6 +125,8 @@ moduleRouter.get('/list', Auth, List);
  *         description: Validation error / module already exists
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: Domain not found
  *       500:
  *         description: Server error
  */
@@ -110,7 +136,7 @@ moduleRouter.post('/create', Auth, Create);
  * @swagger
  * /api/module/update/{id}:
  *   put:
- *     summary: Update a module
+ *     summary: Update a module (domain_id is required)
  *     tags: [Module]
  *     security:
  *       - bearerAuth: []
@@ -127,8 +153,11 @@ moduleRouter.post('/create', Auth, Create);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name]
+ *             required: [name, domain_id]
  *             properties:
+ *               domain_id:
+ *                 type: string
+ *                 format: uuid
  *               name:
  *                 type: string
  *                 example: Visitor Management
@@ -137,10 +166,11 @@ moduleRouter.post('/create', Auth, Create);
  *                 example: /visitors
  *               icon:
  *                 type: string
- *                 example: 
  *               status:
  *                 type: boolean
  *                 example: true
+ *               is_portal:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Module updated successfully
@@ -149,7 +179,7 @@ moduleRouter.post('/create', Auth, Create);
  *       401:
  *         description: Unauthorized
  *       404:
- *         description: Module not found
+ *         description: Module or domain not found
  *       500:
  *         description: Server error
  */
