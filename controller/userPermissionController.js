@@ -52,6 +52,7 @@ const Save = async (req, res) => {
             userId: req.userId, tableName: 'user_permission_mapping', actionType: 'UPDATE',
             recordId: user_id, oldValues, newValues: rows,
         });
+         const token = req.headers.authorization?.split(' ')[1];
         const sync = await syncUserPermissions({
             token,
             centralUserId: user_id,

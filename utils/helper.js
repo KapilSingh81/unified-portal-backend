@@ -31,7 +31,11 @@ export const syncUserPermissions = async ({ token, centralUserId, centralRoleId,
     try {
         const response = await fetch(`${process.env.CENTRAL_AUTH_URL}/api/CentralAuth/SyncUserPermissions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', accept: 'text/plain' },
+            headers: {
+                accept: '*/*',
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({
                 centralUserId,
                 centralRoleId,
