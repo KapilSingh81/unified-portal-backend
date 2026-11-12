@@ -11,12 +11,12 @@ const Dashboard = async (req, res) => {
     try {
         const userId = req.userId;
         const roleId = req.roleId;
+        const now = new Date();
 
         const role = await roleModel.findOne({ where: { id: roleId, is_deleted: false }, raw: true });
         if (!role) return ResponseService.notFound(res, 'Role not found');
         const isAdmin = ADMIN_ROLES.includes(role.name.trim().toLowerCase());
 
-        // third-party modules only (portal modules come from /api/my-menus)
         const modules = await moduleModel.findAll({
             where: { is_deleted: false, is_portal: false },
             attributes: ['id', 'domain_id', 'name', 'url', 'icon'],
@@ -42,7 +42,6 @@ const Dashboard = async (req, res) => {
         const paymentByModule = new Map();
 
         if (!isAdmin) {
-            // role permission, overridden by user permission
             const effective = await getEffectivePermissions(userId, roleId);
             for (const m of allMenus) {
                 const p = effective.get(m.id);
@@ -51,18 +50,26 @@ const Dashboard = async (req, res) => {
                 }
             }
 
-            // paid only between starts_at and expires_at
             const payments = await userModulePaymentModel.findAll({
                 where: { user_id: userId },
                 attributes: ['module_id', 'is_paid', 'starts_at', 'expires_at'],
                 raw: true,
             });
-            const now = new Date();
+
             for (const p of payments) {
-                const active = p.is_paid
-                    && (!p.starts_at || new Date(p.starts_at) <= now)
-                    && (!p.expires_at || new Date(p.expires_at) > now);
-                paymentByModule.set(p.module_id, { active, expires_at: p.expires_at ?? null });
+                const started = !p.starts_at || new Date(p.starts_at) <= now;
+                const notExpired = !p.expires_at || new Date(p.expires_at) > now;
+                const active = !!p.is_paid && started && notExpired;
+
+                const prev = paymentByModule.get(p.module_id);
+                if (!prev || (active && !prev.active)) {
+                    paymentByModule.set(p.module_id, {
+                        active,
+                        paid: !!p.is_paid,
+                        starts_at: p.starts_at ?? null,
+                        expires_at: p.expires_at ?? null,
+                    });
+                }
             }
         }
 
@@ -89,8 +96,11 @@ const Dashboard = async (req, res) => {
                 message = 'Please get access to at least one menu of this module';
             } else if (!is_payment) {
                 state = 'PAYMENT_PENDING';
-                message = 'Please complete the payment to use this module';
+                message = pay?.paid && pay.starts_at && new Date(pay.starts_at) > now
+                    ? `Your plan starts on ${new Date(pay.starts_at).toISOString().slice(0, 10)}`
+                    : 'Please complete the payment to use this module';
             }
+
             return {
                 ...m, menu_count, total_menus, has_access, is_payment,
                 expires_at: is_payment ? pay.expires_at : null,
@@ -106,7 +116,6 @@ const Dashboard = async (req, res) => {
 
         return ResponseService.success(res, 'Success', { is_admin: isAdmin, summary, modules: data });
     } catch (error) {
-        // MSSQL errors hide the text in error.original.errors
         const dbMessages = error.original?.errors?.map((e) => e.message);
         console.error('Dashboard error:', dbMessages ?? error);
         return ResponseService.error(res, dbMessages?.join(' | ') || error.message || 'Server error');
