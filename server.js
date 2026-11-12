@@ -19,6 +19,8 @@ import commonRouter from "./routes/commonRoutes.js";
 import dashboardRouter from "./routes/paymentRoutes.js";
 import rolePermissionRouter from "./routes/roleMenuRoutes.js";
 import userPermissionRouter from "./routes/userPermissionRouter.js";
+import modulePlanRouter from "./routes/modulePlanRouter.js";
+import paymentRouter from "./routes/paymentOrderRouter.js";
 
 const app = express();
 
@@ -41,6 +43,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/common", commonRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/user-permission', userPermissionRouter);
+app.use('/api/module-plan', modulePlanRouter);
+app.use('/api/payment', paymentRouter);
 
 
 const PORT = process.env.PORT || 4000;

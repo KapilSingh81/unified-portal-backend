@@ -22,15 +22,15 @@ export const moduleModel = sequelize.define("module_master", {
         defaultValue: true,
     },
     icon: {
-       type: DataTypes.STRING,
-        allowNull: true 
+        type: DataTypes.STRING,
+        allowNull: true
     },
     is_deleted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: false,
     },
-    is_portal: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    is_portal: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
 },
     {
         tableName: "module_master",
