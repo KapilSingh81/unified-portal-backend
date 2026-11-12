@@ -106,8 +106,10 @@ const Dashboard = async (req, res) => {
 
         return ResponseService.success(res, 'Success', { is_admin: isAdmin, summary, modules: data });
     } catch (error) {
-        console.error('Dashboard error:', error);
-        return ResponseService.error(res, error.message);
+        // MSSQL errors hide the text in error.original.errors
+        const dbMessages = error.original?.errors?.map((e) => e.message);
+        console.error('Dashboard error:', dbMessages ?? error);
+        return ResponseService.error(res, dbMessages?.join(' | ') || error.message || 'Server error');
     }
 };
 

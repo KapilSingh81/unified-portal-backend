@@ -6,6 +6,9 @@ export const userModulePaymentModel = sequelize.define("user_module_payment", {
     user_id: { type: DataTypes.UUID, allowNull: false },
     module_id: { type: DataTypes.UUID, allowNull: false, references: { model: 'module_master', key: 'id' } },
     is_paid: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    plan_id: { type: DataTypes.UUID, allowNull: true },
+    starts_at: { type: DataTypes.DATE, allowNull: true },
+    expires_at: { type: DataTypes.DATE, allowNull: true },
 }, {
     tableName: "user_module_payment",
     freezeTableName: true,
