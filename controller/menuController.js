@@ -92,4 +92,4 @@ const deleteMenu = async (req, res) => {
     }
 };
 
-export { Create, List, update, deleteMenu };
+export { Create, List, update, deleteMenu }; 
