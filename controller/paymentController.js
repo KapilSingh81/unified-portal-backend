@@ -57,18 +57,25 @@ const Dashboard = async (req, res) => {
             });
 
             for (const p of payments) {
-                const started = !p.starts_at || new Date(p.starts_at) <= now;
-                const notExpired = !p.expires_at || new Date(p.expires_at) > now;
-                const active = !!p.is_paid && started && notExpired;
+                const expiresAt = p.expires_at ? new Date(p.expires_at) : null;
+                const notExpired = !expiresAt || expiresAt > now;
+                const paid = !!p.is_paid;
+
+                const entry = {
+                    active: paid && notExpired, 
+                    paid,
+                    starts_at: p.starts_at ?? null,
+                    expires_at: p.expires_at ?? null,
+                };
 
                 const prev = paymentByModule.get(p.module_id);
-                if (!prev || (active && !prev.active)) {
-                    paymentByModule.set(p.module_id, {
-                        active,
-                        paid: !!p.is_paid,
-                        starts_at: p.starts_at ?? null,
-                        expires_at: p.expires_at ?? null,
-                    });
+                if (
+                    !prev ||
+                    (entry.active && !prev.active) ||
+                    (entry.active === prev.active &&
+                        new Date(entry.expires_at || 0) > new Date(prev.expires_at || 0))
+                ) {
+                    paymentByModule.set(p.module_id, entry);
                 }
             }
         }
@@ -96,9 +103,7 @@ const Dashboard = async (req, res) => {
                 message = 'Please get access to at least one menu of this module';
             } else if (!is_payment) {
                 state = 'PAYMENT_PENDING';
-                message = pay?.paid && pay.starts_at && new Date(pay.starts_at) > now
-                    ? `Your plan starts on ${new Date(pay.starts_at).toISOString().slice(0, 10)}`
-                    : 'Please complete the payment to use this module';
+                message = 'Please complete the payment to use this module';
             }
 
             return {
