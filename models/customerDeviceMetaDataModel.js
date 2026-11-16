@@ -1,0 +1,35 @@
+import { DataTypes } from "sequelize";
+import { sequelize } from "../config/db.config.js";
+
+export const customerDeviceMetaDataModel = sequelize.define("customer_device_meta_data", {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+    fk_device_id: { type: DataTypes.INTEGER, allowNull: false },
+    sim_imei: { type: DataTypes.STRING(32), allowNull: true },
+    fk_installer: { type: DataTypes.INTEGER, allowNull: true },
+    fk_sales_person: { type: DataTypes.INTEGER, allowNull: true },
+    is_ignition_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_ac_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_door_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_fuel_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_temp_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_rfid_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_sos_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    is_odometer_enable: { type: DataTypes.SMALLINT, allowNull: true },
+    admin_numbers: { type: DataTypes.STRING(64), allowNull: true },
+    overspeed_limit: { type: DataTypes.DOUBLE, allowNull: true },
+    enable_parking: { type: DataTypes.SMALLINT, allowNull: true },
+    parking_latitude: { type: DataTypes.DOUBLE, allowNull: true },
+    parking_longitude: { type: DataTypes.DOUBLE, allowNull: true },
+    last_geofence_id: { type: DataTypes.INTEGER, allowNull: true },
+    creation_time: { type: DataTypes.DATE, allowNull: true },
+    last_update_on: { type: DataTypes.DATE, allowNull: true },
+    is_relay_on: { type: DataTypes.SMALLINT, allowNull: true },
+    relay_time: { type: DataTypes.DATE, allowNull: true },
+    is_psend: { type: DataTypes.INTEGER, allowNull: true },
+    enable_parking_on_off: { type: DataTypes.INTEGER, allowNull: true },
+    enable_parking_move: { type: DataTypes.INTEGER, allowNull: true },
+}, {
+    tableName: "customer_device_meta_data",
+    freezeTableName: true,
+    timestamps: false,
+});

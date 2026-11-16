@@ -1,6 +1,6 @@
 import express from "express";
 import Auth from "../middleware/auth.js";
-import { companyDDList, roleDDList, domainDDList, moduleDDList, userDDList } from "../controller/commonController.js";
+import { companyDDList, roleDDList, domainDDList, moduleDDList, userDDList, customerDeviceDDLList } from "../controller/commonController.js";
 
 const commonRouter = express.Router();
 
@@ -137,5 +137,51 @@ commonRouter.get("/moduleDDList/:domain_id", Auth, moduleDDList);
  *         description: Access denied
  */
 commonRouter.get("/userDDList/:company_id", Auth, userDDList);
+
+/**
+ * @swagger
+ * /api/common/customerDeviceDDLList:
+ *   get:
+ *     summary: Customer device dropdown list (id and vehicle_no). Admin must pass user_id, normal user gets own devices.
+ *     tags: [Common]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: user_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Required for admin (selected user). Ignored for normal users.
+ *     responses:
+ *       200:
+ *         description: List of devices
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       vehicle_no:
+ *                         type: string
+ *                         example: GJ01AB1234
+ *       403:
+ *         description: Access denied
+ */
+commonRouter.get("/customerDeviceDDLList", Auth, customerDeviceDDLList);
 
 export default commonRouter;

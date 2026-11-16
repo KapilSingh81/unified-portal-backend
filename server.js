@@ -21,6 +21,8 @@ import rolePermissionRouter from "./routes/roleMenuRoutes.js";
 import userPermissionRouter from "./routes/userPermissionRouter.js";
 import modulePlanRouter from "./routes/modulePlanRouter.js";
 import paymentRouter from "./routes/paymentOrderRouter.js";
+import reportsRoutes from "./routes/reportsRoutes.js";
+import reportMasterRoutes from "./routes/reportsMasterRoutes.js";
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/user-permission', userPermissionRouter);
 app.use('/api/module-plan', modulePlanRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/report', reportsRoutes);
+app.use('/api/reportMaster',reportMasterRoutes )
 
 
 const PORT = process.env.PORT || 4000;

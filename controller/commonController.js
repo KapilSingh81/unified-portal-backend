@@ -1,4 +1,5 @@
 import { companyModel } from "../models/companyModel.js";
+import { customerDeviceModel } from "../models/customerDeviceModel.js";
 import { domainModel } from "../models/domainModel.js";
 import { moduleModel } from "../models/moudleModel.js";
 import { roleModel } from "../models/roleModel.js";
@@ -97,6 +98,38 @@ export const userDDList = async (req, res) => {
     } catch (error) {
         const dbMessages = error.original?.errors?.map((e) => e.message);
         console.error('userDDList error:', dbMessages ?? error.message);
+        return ResponseService.error(res, dbMessages?.join(' | ') ?? error.message);
+    }
+};
+
+export const customerDeviceDDLList = async (req, res) => {
+    try {
+        const { userId, roleId } = req;
+        const isAdmin = await roleModel.findOne({
+            where: { id: roleId, is_deleted: false },
+            attributes: ['name'],
+            raw: true,
+        })
+        let targetUserId;
+        if (isAdmin) {
+            targetUserId = req.query.user_id;
+            if (!targetUserId) {
+                return ResponseService.success(res, 'Success', []);
+            }
+        } else {
+            targetUserId = userId;
+        };
+        const devices = await customerDeviceModel.findAll({
+            attributes: ['id', 'vehicle_no'],
+            where: { CentralUserId: targetUserId },
+            order: [['id', 'ASC']],
+            raw: true,
+        });
+
+        return ResponseService.success(res, 'Success', devices);
+    } catch (error) {
+        const dbMessages = error.original?.errors?.map((e) => e.message);
+        console.error('customerDeviceDDLList error:', dbMessages ?? error.message);
         return ResponseService.error(res, dbMessages?.join(' | ') ?? error.message);
     }
 };
