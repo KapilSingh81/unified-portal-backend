@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { Op, QueryTypes } from "sequelize";
+import { Op, QueryTypes, fn, col } from "sequelize";
 import { sequelize } from "../config/db.config.js";
 import ResponseService from "../utils/httpService.js";
 import { isUuid, isNonEmpty } from "../utils/validate.js";
@@ -138,12 +138,15 @@ const Create = async (req, res) => {
     }
 };
 
+
+const lc = (v) => String(v).toLowerCase();
+
 const List = async (req, res) => {
     try {
         const actor = await getActor(req.userId);
         if (!actor) return ResponseService.notFound(res, 'User not found');
 
-        const { company_id, role_id } = req.query;
+        const { company_id, role_id, parent_id, deep } = req.query;
         const where = { is_deleted: false };
 
         if (company_id) {
@@ -154,9 +157,24 @@ const List = async (req, res) => {
             if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Invalid role id');
             where.role_id = role_id;
         }
-        if (!actor.isAdmin) {
-            where.id = { [Op.in]: await getSubtreeIds(actor.user.id) };
+
+        // Non-admin: limited to own subtree
+        let allowedIds = actor.isAdmin ? null : await getSubtreeIds(actor.user.id);
+
+        if (parent_id) {
+            if (!isUuid(parent_id)) return ResponseService.badRequest(res, 'Invalid parent id');
+            if (deep === 'true') {
+                let ids = await getSubtreeIds(parent_id);
+                if (allowedIds) {
+                    const allowed = new Set(allowedIds.map(lc));
+                    ids = ids.filter((i) => allowed.has(lc(i)));
+                }
+                allowedIds = ids;
+            } else {
+                where.parentId = parent_id;
+            }
         }
+        if (allowedIds) where.id = { [Op.in]: allowedIds };
 
         const users = await userModel.findAll({
             where,
@@ -164,19 +182,34 @@ const List = async (req, res) => {
             include: INCLUDE,
             order: [['first_name', 'ASC'], ['user_name', 'ASC']],
         });
+
+        // parent names
         const parentIds = [...new Set(users.map((u) => u.parentId).filter(Boolean))];
         const parents = parentIds.length
             ? await userModel.findAll({
                 where: { id: { [Op.in]: parentIds } },
-                attributes: ['id', 'first_name', 'last_name', 'user_name'],
+                attributes: ['id', 'first_name', 'last_name'],
             })
             : [];
+        const parentMap = new Map(parents.map((p) => [lc(p.id), p]));
 
-        const parentMap = new Map(parents.map((p) => [String(p.id).toLowerCase(), p]));
+        // direct sub-user counts
+        const userIds = users.map((u) => u.id);
+        const counts = userIds.length
+            ? await userModel.findAll({
+                where: { parentId: { [Op.in]: userIds }, is_deleted: false },
+                attributes: ['parentId', [fn('COUNT', col('id')), 'cnt']],
+                group: ['parentId'],
+                raw: true,
+            })
+            : [];
+        const countMap = new Map(counts.map((c) => [lc(c.parentId), Number(c.cnt)]));
+
         const data = users.map((u) => {
             const row = u.toJSON();
-            const p = u.parentId ? parentMap.get(String(u.parentId).toLowerCase()) : null;
+            const p = u.parentId ? parentMap.get(lc(u.parentId)) : null;
             row.parentName = p ? [p.first_name, p.last_name].filter(Boolean).join(' ') : null;
+            row.childCount = countMap.get(lc(u.id)) || 0;
             return row;
         });
 

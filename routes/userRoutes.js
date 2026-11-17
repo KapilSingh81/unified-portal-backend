@@ -81,8 +81,11 @@ userRouter.post('/create', Auth, Create);
  * @swagger
  * /api/user/list:
  *   get:
- *     summary: Get users (filter by company_id and/or role_id)
- *     description: Admin sees all users. A non-admin sees only their own sub-users (children, grandchildren and so on).
+ *     summary: Get users (filter by company_id, role_id and/or parent_id)
+ *     description: >
+ *       Admin sees all users. A non-admin sees only their own sub-users (children, grandchildren and so on).
+ *       Each user includes parentName and childCount (number of direct sub-users).
+ *       Use parent_id to list the direct sub-users of a user, or add deep=true for all nested descendants.
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -93,15 +96,84 @@ userRouter.post('/create', Auth, Create);
  *           type: string
  *           format: uuid
  *       - in: query
- *         name: role_id
+ *         name: parent_id
  *         schema:
  *           type: string
  *           format: uuid
+ *         description: Return only the direct sub-users of this user.
+ *       - in: query
+ *         name: deep
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Used with parent_id. If true, returns all nested descendants instead of direct children only.
  *     responses:
  *       200:
- *         description: List of users with role and company
+ *         description: List of users with role, company, parentName and childCount
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       user_name:
+ *                         type: string
+ *                         example: rahul01
+ *                       first_name:
+ *                         type: string
+ *                         example: Rahul
+ *                       last_name:
+ *                         type: string
+ *                         example: Sharma
+ *                       email:
+ *                         type: string
+ *                         example: rahul@example.com
+ *                       status:
+ *                         type: boolean
+ *                       parentId:
+ *                         type: string
+ *                         format: uuid
+ *                         nullable: true
+ *                       parentName:
+ *                         type: string
+ *                         nullable: true
+ *                         example: Amit Verma
+ *                       childCount:
+ *                         type: integer
+ *                         example: 3
+ *                       role:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
+ *                       company:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                             format: uuid
+ *                           name:
+ *                             type: string
  *       400:
- *         description: Invalid company id or role id
+ *         description: Invalid company id, role id or parent id
+ *       404:
+ *         description: User not found
  */
 userRouter.get('/list', Auth, List);
 
