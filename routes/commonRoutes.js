@@ -1,6 +1,6 @@
 import express from "express";
 import Auth from "../middleware/auth.js";
-import { companyDDList, roleDDList, domainDDList, moduleDDList, userDDList, customerDeviceDDLList } from "../controller/commonController.js";
+import { companyDDList, roleDDList, domainDDList, moduleDDList, userDDList, customerDeviceDDLList, parentDDLList } from "../controller/commonController.js";
 
 const commonRouter = express.Router();
 
@@ -183,5 +183,54 @@ commonRouter.get("/userDDList/:company_id", Auth, userDDList);
  *         description: Access denied
  */
 commonRouter.get("/customerDeviceDDLList", Auth, customerDeviceDDLList);
+
+/**
+ * @swagger
+ * /api/common/parentDDLList:
+ *   get:
+ *     summary: Parent user dropdown list (users who have at least one sub-user). Optional company filter.
+ *     tags: [Common]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: company_id
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Company id. If passed, only parents of that company's users are returned.
+ *     responses:
+ *       200:
+ *         description: List of parent users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Success
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                         example: Rahul Sharma
+ *                       user_name:
+ *                         type: string
+ *                         example: rahul01
+ *       400:
+ *         description: Invalid company id
+ */
+commonRouter.get("/parentDDLList", Auth, parentDDLList);
 
 export default commonRouter;

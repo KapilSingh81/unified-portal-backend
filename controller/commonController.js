@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { companyModel } from "../models/companyModel.js";
 import { customerDeviceModel } from "../models/customerDeviceModel.js";
 import { domainModel } from "../models/domainModel.js";
@@ -131,5 +132,41 @@ export const customerDeviceDDLList = async (req, res) => {
         const dbMessages = error.original?.errors?.map((e) => e.message);
         console.error('customerDeviceDDLList error:', dbMessages ?? error.message);
         return ResponseService.error(res, dbMessages?.join(' | ') ?? error.message);
+    }
+};
+
+export const parentDDLList = async (req, res) => {
+    try {
+        const { company_id } = req.query;
+        const childWhere = { is_deleted: false, parentId: { [Op.ne]: null } };
+        if (company_id) {
+            if (!isUuid(company_id)) return ResponseService.badRequest(res, 'Invalid company id');
+            childWhere.company_id = company_id;
+        }
+
+        const rows = await userModel.findAll({
+            where: childWhere,
+            attributes: ['parentId'],
+            group: ['parentId'],
+            raw: true,
+        });
+        const parentIds = rows.map((r) => r.parentId);
+
+        if (!parentIds.length) return ResponseService.success(res, 'Success', []);
+
+        const parents = await userModel.findAll({
+            where: { id: { [Op.in]: parentIds }, is_deleted: false },
+            attributes: ['id', 'first_name', 'last_name', 'user_name'],
+            order: [['first_name', 'ASC'], ['user_name', 'ASC']],
+        });
+
+        const data = parents.map((p) => ({
+            id: p.id,
+            name: [p.first_name, p.last_name].filter(Boolean).join(' '),
+            user_name: p.user_name,
+        }));
+        return ResponseService.success(res, 'Success', data);
+    } catch (error) {
+        return ResponseService.error(res, error.message);
     }
 };
