@@ -164,7 +164,23 @@ const List = async (req, res) => {
             include: INCLUDE,
             order: [['first_name', 'ASC'], ['user_name', 'ASC']],
         });
-        return ResponseService.success(res, 'Success', users);
+        const parentIds = [...new Set(users.map((u) => u.parentId).filter(Boolean))];
+        const parents = parentIds.length
+            ? await userModel.findAll({
+                where: { id: { [Op.in]: parentIds } },
+                attributes: ['id', 'first_name', 'last_name', 'user_name'],
+            })
+            : [];
+
+        const parentMap = new Map(parents.map((p) => [String(p.id).toLowerCase(), p]));
+        const data = users.map((u) => {
+            const row = u.toJSON();
+            const p = u.parentId ? parentMap.get(String(u.parentId).toLowerCase()) : null;
+            row.parentName = p ? [p.first_name, p.last_name].filter(Boolean).join(' ') : null;
+            return row;
+        });
+
+        return ResponseService.success(res, 'Success', data);
     } catch (error) {
         return ResponseService.error(res, error.message);
     }
