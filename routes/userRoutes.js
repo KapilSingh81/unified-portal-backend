@@ -16,6 +16,11 @@ const userRouter = express.Router();
  * /api/user/create:
  *   post:
  *     summary: Create a user
+ *     description: >
+ *       Admin can always create users. A non-admin can create users only if
+ *       is_subchild_create is true for them. The new user's parentId is always
+ *       the logged-in creator, and a non-admin creator can only assign the User role
+ *       inside their own company.
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -56,13 +61,19 @@ const userRouter = express.Router();
  *               status:
  *                 type: boolean
  *                 default: true
+ *               is_subchild_create:
+ *                 type: boolean
+ *                 default: false
+ *                 description: If true, the new user can create their own sub-users
  *     responses:
  *       201:
  *         description: User created successfully
  *       400:
  *         description: Validation error, user name already exists or email already exists
+ *       403:
+ *         description: Not allowed to create users, wrong company, or role other than User
  *       404:
- *         description: Company or role not found
+ *         description: Creator, company or role not found
  */
 userRouter.post('/create', Auth, Create);
 
@@ -71,6 +82,7 @@ userRouter.post('/create', Auth, Create);
  * /api/user/list:
  *   get:
  *     summary: Get users (filter by company_id and/or role_id)
+ *     description: Admin sees all users. A non-admin sees only their own sub-users (children, grandchildren and so on).
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -98,6 +110,7 @@ userRouter.get('/list', Auth, List);
  * /api/user/{id}:
  *   get:
  *     summary: Get a single user
+ *     description: Allowed for admin, for the user themselves, or for a user in their parent chain.
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -113,6 +126,8 @@ userRouter.get('/list', Auth, List);
  *         description: User details
  *       400:
  *         description: Valid user id is required
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: User not found
  */
@@ -124,8 +139,11 @@ userRouter.get('/:id', Auth, GetById);
  *   put:
  *     summary: Update a user (send only the fields to change)
  *     description: >
- *       Changing the role removes the user's user-level permission overrides,
- *       so the new role's permissions apply.
+ *       Admin can update any user. A non-admin can update only users in their own
+ *       sub-tree and can assign only the User role. Changing the role removes the
+ *       user's user-level permission overrides, so the new role's permissions apply.
+ *       is_subchild_create can be changed only by admin or by the user's direct
+ *       parent (who must have the permission themselves).
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -162,11 +180,15 @@ userRouter.get('/:id', Auth, GetById);
  *                 type: string
  *               status:
  *                 type: boolean
+ *               is_subchild_create:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: User updated successfully
  *       400:
  *         description: Validation error, user name already exists or email already exists
+ *       403:
+ *         description: Access denied, or not allowed to change role or is_subchild_create
  *       404:
  *         description: User or role not found
  */
@@ -176,7 +198,11 @@ userRouter.put('/update/:id', Auth, update);
  * @swagger
  * /api/user/delete/{id}:
  *   delete:
- *     summary: Delete a user (soft delete) and remove its parent/child links and permission overrides
+ *     summary: Delete a user (soft delete)
+ *     description: >
+ *       Admin can delete any user. A non-admin can delete only users in their own sub-tree.
+ *       The user's direct children are moved to the deleted user's parent, and their
+ *       parent/child links and permission overrides are removed.
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
@@ -191,7 +217,9 @@ userRouter.put('/update/:id', Auth, update);
  *       200:
  *         description: User deleted successfully
  *       400:
- *         description: Valid user id is required
+ *         description: Valid user id is required, or trying to delete yourself
+ *       403:
+ *         description: Access denied
  *       404:
  *         description: User not found
  */

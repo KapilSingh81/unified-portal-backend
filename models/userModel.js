@@ -26,6 +26,16 @@ export const userModel = sequelize.define("user_master", {
         type: DataTypes.STRING(100),
         allowNull: true,
     },
+    parentId: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        defaultValue: null,
+    },
+    is_subchild_create: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
     email: {
         type: DataTypes.STRING(150),
         allowNull: false,
