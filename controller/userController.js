@@ -8,7 +8,7 @@ import {
     companyModel, roleModel, userModel, parentUserMappingModel,
 } from "../models/index.js";
 import { userPermissionMappingModel } from "../models/userPermissionModel.js";
-import { provisionEmployee } from "../utils/helper.js";
+import { getActor, getSubtreeIds, provisionEmployee } from "../utils/helper.js";
 
 const SAFE_ATTRS = { exclude: ['password'] };
 const INCLUDE = [
@@ -19,41 +19,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ADMIN_ROLE_NAME = 'Admin';
 const USER_ROLE_NAME = 'User';
 
-// ---------- helpers ----------
-
-const getActor = async (userId) => {
-    const actor = await userModel.findOne({
-        where: { id: userId, is_deleted: false, status: true },
-        include: [{ model: roleModel, as: 'role', attributes: ['id', 'name'] }],
-    });
-    if (!actor) return null;
-    return { user: actor, isAdmin: actor.role?.name === ADMIN_ROLE_NAME };
-};
-
-// All descendant user ids (children, grandchildren, ...) of a user
-const getSubtreeIds = async (rootId) => {
-    const rows = await sequelize.query(
-        `WITH tree AS (
-            SELECT id FROM user_master WHERE parentId = :rootId AND is_deleted = 0
-            UNION ALL
-            SELECT u.id FROM user_master u
-            INNER JOIN tree t ON u.parentId = t.id
-            WHERE u.is_deleted = 0
-        )
-        SELECT id FROM tree OPTION (MAXRECURSION 100)`,
-        { replacements: { rootId }, type: QueryTypes.SELECT }
-    );
-    return rows.map((r) => r.id);
-};
-
-// Admin: any user. Non-admin: only users in own subtree.
 const canManage = async (actor, targetId) => {
     if (actor.isAdmin) return true;
     const ids = await getSubtreeIds(actor.user.id);
     return ids.includes(targetId);
 };
-
-// ---------- controllers ----------
 
 const Create = async (req, res) => {
     try {
@@ -112,7 +82,7 @@ const Create = async (req, res) => {
             last_name: lastName?.trim() || null,
             email: emailLower,
             contact: contact?.trim() || null,
-            parentId: actor.user.id,                 // always the creator, never from body
+            parentId: actor.user.id,
             is_subchild_create: !!is_subchild_create,
         });
 

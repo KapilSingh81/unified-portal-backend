@@ -60,3 +60,27 @@ export const syncUserPermissions = async ({ token, centralUserId, centralRoleId,
         return { ok: false, error: error.message };
     }
 };
+
+export const getActor = async (userId) => {
+    const actor = await userModel.findOne({
+        where: { id: userId, is_deleted: false, status: true },
+        include: [{ model: roleModel, as: 'role', attributes: ['id', 'name'] }],
+    });
+    if (!actor) return null;
+    return { user: actor, isAdmin: actor.role?.name === ADMIN_ROLE_NAME };
+};
+
+export const getSubtreeIds = async (rootId) => {
+    const rows = await sequelize.query(
+        `WITH tree AS (
+            SELECT id FROM user_master WHERE parentId = :rootId AND is_deleted = 0
+            UNION ALL
+            SELECT u.id FROM user_master u
+            INNER JOIN tree t ON u.parentId = t.id
+            WHERE u.is_deleted = 0
+        )
+        SELECT id FROM tree OPTION (MAXRECURSION 100)`,
+        { replacements: { rootId }, type: QueryTypes.SELECT }
+    );
+    return rows.map((r) => r.id);
+};

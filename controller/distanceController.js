@@ -9,11 +9,24 @@ function getDistance(lat1, lon1, lat2, lon2) {
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
         Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+
+const isValidDate = (date) => {
+    const parsed = new Date(`${date}T00:00:00.000Z`);
+    return (
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === date
+    );
+};
+
+const formatSQLDate = (date) =>
+    date.toISOString().slice(0, 23).replace("T", " ");
 
 export const distanceController = async (req, res) => {
     try {
@@ -30,6 +43,7 @@ export const distanceController = async (req, res) => {
                 400
             );
         }
+
         if (!DATE_RE.test(fromDate) || !DATE_RE.test(toDate)) {
             return ResponseService.error(
                 res,
@@ -41,15 +55,6 @@ export const distanceController = async (req, res) => {
         const fromDay = String(fromDate).slice(0, 10);
         const toDay = String(toDate).slice(0, 10);
 
-        const isValidDate = (date) => {
-            const parsed = new Date(`${date}T00:00:00.000Z`);
-
-            return (
-                !Number.isNaN(parsed.getTime()) &&
-                parsed.toISOString().slice(0, 10) === date
-            );
-        };
-
         if (!isValidDate(fromDay) || !isValidDate(toDay)) {
             return ResponseService.error(res, "Invalid date value", 400);
         }
@@ -59,20 +64,14 @@ export const distanceController = async (req, res) => {
         }
 
         const startDate = new Date(`${fromDay}T00:00:00.000Z`);
-
         const endDate = new Date(`${toDay}T00:00:00.000Z`);
         endDate.setUTCDate(endDate.getUTCDate() + 1);
-
-        const formatSQLDate = (date) => {
-            return date.toISOString().slice(0, 23).replace("T", " ");
-        };
 
         const fromStr = formatSQLDate(startDate);
         const toStr = formatSQLDate(endDate);
 
-        const deviceWhere = {
-            CentralUserId: userId
-        };
+        // ---- Devices ----
+        const deviceWhere = { CentralUserId: userId };
 
         const rawDeviceIds = Array.isArray(deviceId)
             ? deviceId
@@ -82,7 +81,7 @@ export const distanceController = async (req, res) => {
 
         if (rawDeviceIds.length) {
             const parsedDeviceIds = [
-                ...new Set(rawDeviceIds.map((id) => Number(String(id).trim())))
+                ...new Set(rawDeviceIds.map((id) => Number(String(id).trim()))),
             ];
 
             if (parsedDeviceIds.some((id) => !Number.isInteger(id) || id <= 0)) {
@@ -102,10 +101,9 @@ export const distanceController = async (req, res) => {
             return ResponseService.error(res, "No device found", 404);
         }
 
-        const deviceMap = new Map(
-            devices.map((d) => [Number(d.id), d.vehicle_no])
-        );
+        const deviceIds = devices.map((d) => Number(d.id));
 
+        // ---- Event rows ----
         const rows = await tableEventDataLogModel.findAll({
             attributes: [
                 "fk_device_id",
@@ -113,98 +111,93 @@ export const distanceController = async (req, res) => {
                 "latitude",
                 "longitude",
                 "speed",
-                "di1"
+                "di1",
             ],
             where: {
-                fk_device_id: {
-                    [Op.in]: [...deviceMap.keys()]
-                },
+                fk_device_id: { [Op.in]: deviceIds },
                 time_stamp: {
                     [Op.gte]: literal(`CONVERT(datetime, '${fromStr}', 121)`),
-                    [Op.lt]: literal(`CONVERT(datetime, '${toStr}', 121)`)
+                    [Op.lt]: literal(`CONVERT(datetime, '${toStr}', 121)`),
                 },
-                latitude: {
-                    [Op.ne]: null
-                },
-                longitude: {
-                    [Op.ne]: null
-                }
+                latitude: { [Op.ne]: null },
+                longitude: { [Op.ne]: null },
             },
             order: [
                 ["fk_device_id", "ASC"],
-                ["time_stamp", "ASC"]
+                ["time_stamp", "ASC"],
             ],
             raw: true,
         });
 
-        const grouped = {};
+        // ---- All days in range (fromDay..toDay inclusive) ----
+        const dayList = [];
+        for (
+            const d = new Date(startDate);
+            d < endDate;
+            d.setUTCDate(d.getUTCDate() + 1)
+        ) {
+            dayList.push(d.toISOString().slice(0, 10));
+        }
 
+        // ---- Group rows by device (already ordered by device, time) ----
+        const pointsByDevice = {};
         for (const r of rows) {
-            const dev = Number(r.fk_device_id);
-            const timestamp = new Date(r.time_stamp);
-
-            if (Number.isNaN(timestamp.getTime())) {
-                continue;
-            }
-
-            const day = [
-                timestamp.getUTCFullYear(),
-                String(timestamp.getUTCMonth() + 1).padStart(2, "0"),
-                String(timestamp.getUTCDate()).padStart(2, "0")
-            ].join("-");
-
-            ((grouped[dev] ??= {})[day] ??= []).push(r);
+            (pointsByDevice[Number(r.fk_device_id)] ??= []).push(r);
         }
 
-        const deviceTotals = {};
+        // ---- device -> { "YYYY-MM-DD": km } ----
+        const dailyKm = {};
 
-        for (const dev in grouped) {
-            for (const day in grouped[dev]) {
-                const points = grouped[dev][day];
+        for (const dev in pointsByDevice) {
+            const points = pointsByDevice[dev];
+            const perDay = (dailyKm[dev] = {});
 
-                let distance = 0;
+            for (let i = 1; i < points.length; i++) {
+                const previous = points[i - 1];
+                const current = points[i];
 
-                for (let i = 1; i < points.length; i++) {
-                    const previous = points[i - 1];
-                    const current = points[i];
+                const moving =
+                    Number(current.speed) > 0 || Number(current.di1) === 1;
+                if (!moving) continue;
 
-                    const moving =
-                        Number(current.speed) > 0 ||
-                        Number(current.di1) === 1;
+                const lat1 = Number(previous.latitude);
+                const lon1 = Number(previous.longitude);
+                const lat2 = Number(current.latitude);
+                const lon2 = Number(current.longitude);
 
-                    if (!moving) continue;
+                if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) continue;
 
-                    const lat1 = Number(previous.latitude);
-                    const lon1 = Number(previous.longitude);
-                    const lat2 = Number(current.latitude);
-                    const lon2 = Number(current.longitude);
+                const ts = new Date(current.time_stamp);
+                if (Number.isNaN(ts.getTime())) continue;
 
-                    if (
-                        !Number.isFinite(lat1) ||
-                        !Number.isFinite(lon1) ||
-                        !Number.isFinite(lat2) ||
-                        !Number.isFinite(lon2)
-                    ) {
-                        continue;
-                    }
-
-                    distance += getDistance(lat1, lon1, lat2, lon2);
-                }
-
-                deviceTotals[dev] = (deviceTotals[dev] ?? 0) + distance;
+                const day = ts.toISOString().slice(0, 10);
+                perDay[day] =
+                    (perDay[day] ?? 0) + getDistance(lat1, lon1, lat2, lon2);
             }
         }
 
-        const devicesSummary = devices.map((d) => ({
-            device_id: d.id,
-            vehicle_no: d.vehicle_no,
-            total_km: Number((deviceTotals[d.id] ?? 0).toFixed(2))
-        }));
+        // ---- Build response ----
+        const devicesSummary = devices.map((d) => {
+            const perDay = dailyKm[Number(d.id)] ?? {};
 
-        const totalKm = devicesSummary.reduce(
-            (sum, d) => sum + d.total_km,
-            0
-        );
+            const daily = dayList.map((date) => ({
+                date,
+                device_id: Number(d.id),
+                vehicle_no: d.vehicle_no,
+                km: Number((perDay[date] ?? 0).toFixed(2)),
+            }));
+
+            return {
+                device_id: Number(d.id),
+                vehicle_no: d.vehicle_no,
+                total_km: Number(
+                    daily.reduce((s, x) => s + x.km, 0).toFixed(2)
+                ),
+                daily,
+            };
+        });
+
+        const totalKm = devicesSummary.reduce((s, d) => s + d.total_km, 0);
 
         return ResponseService.success(res, "Success", {
             from: fromDay,
@@ -212,10 +205,8 @@ export const distanceController = async (req, res) => {
             total_km: Number(totalKm.toFixed(2)),
             devices: devicesSummary,
         });
-
     } catch (err) {
         console.error("distanceController error:", err);
-
         return ResponseService.error(res, err.message);
     }
 };

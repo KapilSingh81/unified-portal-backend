@@ -48,7 +48,7 @@ export const login = async (req, res) => {
         delete user.password;
         delete user.role_id;
         delete user.company_id;
-        return ResponseService.success(res, 'Login successfully', { user, token, access });
+        return ResponseService.success(res, 'Login successfully', { user, token, access , is_subchild_create: !!isUser.is_subchild_create });
     } catch (err) {
         console.error(err.message);
         return ResponseService.error(res, err.message);
