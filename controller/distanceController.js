@@ -28,6 +28,9 @@ const isValidDate = (date) => {
 const formatSQLDate = (date) =>
     date.toISOString().slice(0, 23).replace("T", " ");
 
+// Always 2 decimal places, e.g. "12.40"
+const fmt = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+
 export const distanceController = async (req, res) => {
     try {
         const { userId, deviceId, fromDate, toDate } = req.body;
@@ -112,6 +115,8 @@ export const distanceController = async (req, res) => {
                 "longitude",
                 "speed",
                 "di1",
+                // 'YYYY-MM-DD' exactly as stored in DB (no JS timezone conversion)
+                [literal("CONVERT(varchar(10), time_stamp, 23)"), "day"],
             ],
             where: {
                 fk_device_id: { [Op.in]: deviceIds },
@@ -167,10 +172,7 @@ export const distanceController = async (req, res) => {
 
                 if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) continue;
 
-                const ts = new Date(current.time_stamp);
-                if (Number.isNaN(ts.getTime())) continue;
-
-                const day = ts.toISOString().slice(0, 10);
+                const day = current.day; // straight from DB, no timezone conversion
                 perDay[day] =
                     (perDay[day] ?? 0) + getDistance(lat1, lon1, lat2, lon2);
             }
@@ -184,25 +186,30 @@ export const distanceController = async (req, res) => {
                 date,
                 device_id: Number(d.id),
                 vehicle_no: d.vehicle_no,
-                km: Number((perDay[date] ?? 0).toFixed(2)),
+                km: fmt(perDay[date] ?? 0),
             }));
+
+            const deviceTotal = dayList.reduce(
+                (s, date) => s + (perDay[date] ?? 0),
+                0
+            );
 
             return {
                 device_id: Number(d.id),
                 vehicle_no: d.vehicle_no,
-                total_km: Number(
-                    daily.reduce((s, x) => s + x.km, 0).toFixed(2)
-                ),
+                total_km: fmt(deviceTotal),
                 daily,
+                _total: deviceTotal, // internal, removed below
             };
         });
 
-        const totalKm = devicesSummary.reduce((s, d) => s + d.total_km, 0);
+        const totalKm = devicesSummary.reduce((s, d) => s + d._total, 0);
+        devicesSummary.forEach((d) => delete d._total);
 
         return ResponseService.success(res, "Success", {
             from: fromDay,
             to: toDay,
-            total_km: Number(totalKm.toFixed(2)),
+            total_km: fmt(totalKm),
             devices: devicesSummary,
         });
     } catch (err) {
