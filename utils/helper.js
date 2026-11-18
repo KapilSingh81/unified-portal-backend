@@ -116,3 +116,38 @@ export const formatSQLDate = (date) =>
     date.toISOString().slice(0, 23).replace("T", " ");
 
 export const fmt = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
+
+export const pad = (n) => String(n).padStart(2, "0");
+
+export const parseDateTime = (value, isEnd) => {
+    const m = String(value)
+        .trim()
+        .match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (!m) return null;
+
+    const [, date, h, mi, s] = m;
+    if (!isValidDate(date)) return null;
+
+    let hh, mm, ss;
+    if (h === undefined) {
+        hh = isEnd ? 23 : 0;
+        mm = isEnd ? 59 : 0;
+        ss = isEnd ? 59 : 0;
+    } else {
+        hh = Number(h);
+        mm = Number(mi);
+        ss = s !== undefined ? Number(s) : isEnd ? 59 : 0;
+    }
+
+    if (hh > 23 || mm > 59 || ss > 59) return null;
+    return `${date} ${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+};
+
+export const toMs = (str) => Date.parse(`${str.replace(" ", "T")}Z`);
+
+export const formatDuration = (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+};
