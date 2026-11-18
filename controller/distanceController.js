@@ -2,34 +2,8 @@ import { Op, literal } from "sequelize";
 import ResponseService from "../utils/httpService.js";
 import { tableEventDataLogModel } from "../models/tableEventDataLogModel.js";
 import { customerDeviceModel } from "../models/customerDeviceModel.js";
+import { DATE_RE, fmt, formatSQLDate, getDistance, isValidDate } from "../utils/helper.js";
 
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
-
-const isValidDate = (date) => {
-    const parsed = new Date(`${date}T00:00:00.000Z`);
-    return (
-        !Number.isNaN(parsed.getTime()) &&
-        parsed.toISOString().slice(0, 10) === date
-    );
-};
-
-const formatSQLDate = (date) =>
-    date.toISOString().slice(0, 23).replace("T", " ");
-
-// Always 2 decimal places, e.g. "12.40"
-const fmt = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);
 
 export const distanceController = async (req, res) => {
     try {
@@ -172,7 +146,7 @@ export const distanceController = async (req, res) => {
 
                 if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) continue;
 
-                const day = current.day; // straight from DB, no timezone conversion
+                const day = current.day;
                 perDay[day] =
                     (perDay[day] ?? 0) + getDistance(lat1, lon1, lat2, lon2);
             }

@@ -1,4 +1,9 @@
 import "dotenv/config";
+import { roleModel, userModel } from "../models/index.js";
+import { sequelize } from "../config/db.config.js";
+import { QueryTypes } from "sequelize";
+
+const ADMIN_ROLE_NAME = 'Admin';
 
 export const provisionEmployee = async ({ centralUserId, roleId, userName, firstName, lastName, email, contact }) => {
     try {
@@ -84,3 +89,30 @@ export const getSubtreeIds = async (rootId) => {
     );
     return rows.map((r) => r.id);
 };
+
+export function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
+
+export const isValidDate = (date) => {
+    const parsed = new Date(`${date}T00:00:00.000Z`);
+    return (
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === date
+    );
+};
+
+export const formatSQLDate = (date) =>
+    date.toISOString().slice(0, 23).replace("T", " ");
+
+export const fmt = (n) => (Math.round((n + Number.EPSILON) * 100) / 100).toFixed(2);

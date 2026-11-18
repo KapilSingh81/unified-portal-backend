@@ -5,7 +5,8 @@ import ResponseService from "../utils/httpService.js";
 import { isUuid, isNonEmpty } from "../utils/validate.js";
 import { logAction } from "../utils/auditLog.js";
 import {
-    companyModel, roleModel, userModel, parentUserMappingModel,
+    companyModel, roleModel, parentUserMappingModel,
+    userModel,
 } from "../models/index.js";
 import { userPermissionMappingModel } from "../models/userPermissionModel.js";
 import { getActor, getSubtreeIds, provisionEmployee } from "../utils/helper.js";
@@ -118,7 +119,6 @@ const List = async (req, res) => {
 
         const { company_id, role_id, parent_id, deep } = req.query;
         const where = { is_deleted: false };
-
         if (company_id) {
             if (!isUuid(company_id)) return ResponseService.badRequest(res, 'Invalid company id');
             where.company_id = company_id;
@@ -127,8 +127,6 @@ const List = async (req, res) => {
             if (!isUuid(role_id)) return ResponseService.badRequest(res, 'Invalid role id');
             where.role_id = role_id;
         }
-
-        // Non-admin: limited to own subtree
         let allowedIds = actor.isAdmin ? null : await getSubtreeIds(actor.user.id);
 
         if (parent_id) {
@@ -152,8 +150,6 @@ const List = async (req, res) => {
             include: INCLUDE,
             order: [['first_name', 'ASC'], ['user_name', 'ASC']],
         });
-
-        // parent names
         const parentIds = [...new Set(users.map((u) => u.parentId).filter(Boolean))];
         const parents = parentIds.length
             ? await userModel.findAll({
