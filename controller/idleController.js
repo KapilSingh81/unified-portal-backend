@@ -4,82 +4,10 @@ import { tableEventDataLogModel } from "../models/tableEventDataLogModel.js";
 import { customerDeviceModel } from "../models/customerDeviceModel.js";
 import { formatDuration, parseDateTime, toMs } from "../utils/helper.js";
 import { buildPaginationMeta, getPagination } from "../utils/paginationService.js";
+import { fetchPointsByDevice, parseCommon, parseDeviceIds } from "./commonController.js";
 
 
 const isIdle = (p) => Number(p.di1) === 1 && !(Number(p.speed) > 0);
-
-// ---- Validate common request fields ----
-const parseCommon = (body) => {
-    const { userId, fromDate, toDate, timeDuration } = body;
-
-    if (!userId) return { error: ["userId is required", 400] };
-    if (!fromDate || !toDate) {
-        return { error: ["fromDate and toDate are required", 400] };
-    }
-
-    const fromStr = parseDateTime(fromDate, false);
-    const toStr = parseDateTime(toDate, true);
-    if (!fromStr || !toStr) {
-        return { error: ["Date format must be YYYY-MM-DD or YYYY-MM-DD HH:mm", 400] };
-    }
-    if (fromStr > toStr) return { error: ["Invalid date range", 400] };
-
-    const minMinutes =
-        timeDuration === undefined || timeDuration === null || timeDuration === ""
-            ? 0
-            : Number(timeDuration);
-    if (!Number.isFinite(minMinutes) || minMinutes < 0) {
-        return { error: ["Invalid timeDuration", 400] };
-    }
-
-    return { userId, fromStr, toStr, minMinutes, minSeconds: minMinutes * 60 };
-};
-
-// ---- Parse deviceId (array / "1,2" / single) ----
-const parseDeviceIds = (deviceId) => {
-    const raw = Array.isArray(deviceId)
-        ? deviceId
-        : deviceId !== undefined && deviceId !== null && deviceId !== ""
-            ? String(deviceId).split(",")
-            : [];
-
-    const ids = [...new Set(raw.map((id) => Number(String(id).trim())))];
-    if (ids.some((id) => !Number.isInteger(id) || id <= 0)) return null;
-    return ids;
-};
-
-// ---- Fetch raw points, grouped by device ----
-const fetchPointsByDevice = async (deviceIds, fromStr, toStr, withLocation) => {
-    const rows = await tableEventDataLogModel.findAll({
-        attributes: [
-            "fk_device_id",
-            "latitude",
-            "longitude",
-            ...(withLocation ? ["location"] : []),
-            "speed",
-            "di1",
-            [literal("CONVERT(varchar(19), time_stamp, 120)"), "time"],
-        ],
-        where: {
-            fk_device_id: { [Op.in]: deviceIds },
-            time_stamp: {
-                [Op.gte]: literal(`CONVERT(datetime, '${fromStr}.000', 121)`),
-                [Op.lte]: literal(`CONVERT(datetime, '${toStr}.997', 121)`),
-            },
-        },
-        order: [
-            ["fk_device_id", "ASC"],
-            ["time_stamp", "ASC"],
-        ],
-        raw: true,
-    });
-
-    const byDevice = {};
-    for (const r of rows) {
-        (byDevice[Number(r.fk_device_id)] ??= []).push(r);
-    }
-    return byDevice;
-};
 
 // ---- Idle segments for one device ----
 // End time = last point where di1 = 1 and speed = 0

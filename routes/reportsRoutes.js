@@ -3,6 +3,7 @@ import {
     idleReportController,
     idleDeviceDetailController,
 } from "../controller/idleController.js";
+import { tripDeviceDetailController, tripReportController } from "../controller/tripController.js";
 import Auth from "../middleware/auth.js";
 import express from "express";
 
@@ -340,5 +341,206 @@ reportsRoutes.post("/idleReports", Auth, idleReportController);
  *         description: Server error
  */
 reportsRoutes.post("/idleDeviceDetail", Auth, idleDeviceDetailController);
+
+/**
+ * @swagger
+ * /api/report/tripReports:
+ *   post:
+ *     summary: Trip report summary (ignition ON or speed > 0) per device, without child data
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, fromDate, toDate]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: d20b5f31-6ddc-4345-9405-e19cc5a78697
+ *               deviceId:
+ *                 description: Optional. If omitted, all devices of the user are returned.
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [11, 12]
+ *               fromDate:
+ *                 description: "YYYY-MM-DD or YYYY-MM-DD HH:mm"
+ *                 type: string
+ *                 example: "2026-11-18 10:00:00"
+ *               toDate:
+ *                 description: "YYYY-MM-DD or YYYY-MM-DD HH:mm"
+ *                 type: string
+ *                 example: "2026-11-18 12:30:00"
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     from:
+ *                       type: string
+ *                     to:
+ *                       type: string
+ *                     time_duration_minutes:
+ *                       type: number
+ *                     devices:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           device_id:
+ *                             type: integer
+ *                             example: 12
+ *                           vehicle_no:
+ *                             type: string
+ *                             example: DL8CAS3463
+ *                           total_trip_count:
+ *                             type: integer
+ *                             example: 4
+ *                           total_trip_duration:
+ *                             type: string
+ *                             example: "01:25:10"
+ *                           total_distance_km:
+ *                             type: string
+ *                             example: "42.35"
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: No device found
+ */
+reportsRoutes.post("/tripReports", Auth, tripReportController);
+
+/**
+ * @swagger
+ * /api/report/tripDeviceDetail:
+ *   post:
+ *     summary: Trips of one device, paginated, called when a device row is clicked
+ *     tags: [Reports]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userId, deviceId, fromDate, toDate]
+ *             properties:
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *               deviceId:
+ *                 description: Exactly one device id.
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 example: [12]
+ *               page:
+ *                 type: integer
+ *                 default: 1
+ *               limit:
+ *                 description: Trips per page (max 200).
+ *                 type: integer
+ *                 default: 50
+ *               fromDate:
+ *                 type: string
+ *                 example: "2026-11-18 10:00:00"
+ *               toDate:
+ *                 type: string
+ *                 example: "2026-11-18 12:30:00"
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     device_id:
+ *                       type: integer
+ *                     vehicle_no:
+ *                       type: string
+ *                     total_trip_count:
+ *                       type: integer
+ *                     total_trip_duration:
+ *                       type: string
+ *                     total_distance_km:
+ *                       type: string
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         total_pages:
+ *                           type: integer
+ *                         has_next:
+ *                           type: boolean
+ *                         has_prev:
+ *                           type: boolean
+ *                     trips:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           from_time:
+ *                             type: string
+ *                             example: "2026-11-18 10:22:24"
+ *                           to_time:
+ *                             type: string
+ *                             example: "2026-11-18 10:58:10"
+ *                           duration:
+ *                             type: string
+ *                             example: "00:35:46"
+ *                           distance_km:
+ *                             type: string
+ *                             example: "12.40"
+ *                           max_speed:
+ *                             type: number
+ *                             example: 62
+ *                           start_latitude:
+ *                             type: number
+ *                           start_longitude:
+ *                             type: number
+ *                           end_latitude:
+ *                             type: number
+ *                           end_longitude:
+ *                             type: number
+ *                           start_location:
+ *                             type: string
+ *                             nullable: true
+ *                           end_location:
+ *                             type: string
+ *                             nullable: true
+ *       400:
+ *         description: Validation error (exactly one deviceId is required)
+ *       404:
+ *         description: No device found
+ */
+reportsRoutes.post("/tripDeviceDetail", Auth, tripDeviceDetailController);
 
 export default reportsRoutes;
