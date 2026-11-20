@@ -99,6 +99,7 @@ const Create = async (req, res) => {
             lastName: user.last_name,
             email: user.email,
             contact: user.contact,
+            CentralParentUserId : user.parentId
         });
         if (!provision.ok) {
             console.error('ProvisionEmployee failed:', provision.error);

@@ -5,7 +5,7 @@ import { QueryTypes } from "sequelize";
 
 const ADMIN_ROLE_NAME = 'Admin';
 
-export const provisionEmployee = async ({ centralUserId, roleId, userName, firstName, lastName, email, contact }) => {
+export const provisionEmployee = async ({ centralUserId, roleId, userName, firstName, lastName, email, contact, CentralParentUserId}) => {
     try {
         const response = await fetch(`${process.env.VAHAN_AUTH_URL}/api/CentralAuth/ProvisionEmployee`, {
             method: 'POST',
@@ -18,6 +18,7 @@ export const provisionEmployee = async ({ centralUserId, roleId, userName, first
                 lastName: lastName ?? null,
                 email,
                 contact: contact ?? null,
+                CentralParentUserId : CentralParentUserId ?? null
             }),
             signal: AbortSignal.timeout(10000), 
         });
